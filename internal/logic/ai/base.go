@@ -9,7 +9,7 @@ import (
 
 	"github.com/cloudwego/eino-ext/components/model/deepseek"
 	"github.com/cloudwego/eino-ext/components/model/openai"
-	"github.com/cloudwego/eino/components/model"
+	einoModel "github.com/cloudwego/eino/components/model"
 	"github.com/gogf/gf/v2/net/gclient"
 )
 
@@ -25,7 +25,7 @@ func NewAI() *sAI {
 }
 
 // GetChatModel 获取聊天模型
-func (s *sAI) GetChatModel(ai string) (chatModel model.BaseChatModel, err error) {
+func (s *sAI) GetChatModel(ai string) (chatModel einoModel.BaseChatModel, err error) {
 	switch ai {
 	case "openai":
 		chatModel, err = openai.NewChatModel(consts.Ctx, &openai.ChatModelConfig{

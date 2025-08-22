@@ -6,22 +6,28 @@
 package service
 
 import (
+	"ai-chat-sql/internal/model"
 	"context"
 
-	"github.com/cloudwego/eino/components/model"
+	einoModel "github.com/cloudwego/eino/components/model"
 )
 
 type (
 	IAI interface {
 		// GetChatModel 获取聊天模型
-		GetChatModel(ai string) (chatModel model.BaseChatModel, err error)
+		GetChatModel(ai string) (chatModel einoModel.BaseChatModel, err error)
 		// GetChatModeListJson 获取聊天模型列表
 		GetChatModeListJson(ctx context.Context, ai string) (json string, err error)
+	}
+	IAiChat interface {
+		// Chat 聊天
+		Chat(ctx context.Context, in model.ChatInput) (respChan chan any, err error)
 	}
 )
 
 var (
-	localAI IAI
+	localAI     IAI
+	localAiChat IAiChat
 )
 
 func AI() IAI {
@@ -33,4 +39,15 @@ func AI() IAI {
 
 func RegisterAI(i IAI) {
 	localAI = i
+}
+
+func AiChat() IAiChat {
+	if localAiChat == nil {
+		panic("implement not found for interface IAiChat, forgot register?")
+	}
+	return localAiChat
+}
+
+func RegisterAiChat(i IAiChat) {
+	localAiChat = i
 }
