@@ -6,11 +6,14 @@ import (
 	"ai-chat-sql/internal/service"
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/gogf/gf/v2/database/gdb"
 )
 
 type sConfig struct {
+	dbMap map[int]gdb.DB
+	mutex *sync.RWMutex
 }
 
 func init() {
@@ -18,11 +21,24 @@ func init() {
 }
 
 func NewConfig() *sConfig {
-	return &sConfig{}
+	return &sConfig{
+		dbMap: make(map[int]gdb.DB),
+		mutex: &sync.RWMutex{},
+	}
 }
 
 // GetDataBase 获取数据库连接
 func (s *sConfig) GetDataBase(ctx context.Context, databaseId int) (db gdb.DB, err error) {
+	// 先检查缓存
+	s.mutex.RLock()
+	db, ok := s.dbMap[databaseId]
+	s.mutex.RUnlock()
+
+	if ok {
+		return
+	}
+
+	// 创建新的数据库连接
 	link, err := s.GenDataBaseLink(ctx, databaseId)
 	if err != nil {
 		return
@@ -33,6 +49,12 @@ func (s *sConfig) GetDataBase(ctx context.Context, databaseId int) (db gdb.DB, e
 	if err != nil {
 		return
 	}
+
+	// 写入缓存，使用写锁
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	s.dbMap[databaseId] = db
 	return
 }
 
