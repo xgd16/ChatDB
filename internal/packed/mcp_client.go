@@ -8,6 +8,7 @@ import (
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/mark3labs/mcp-go/client"
+	"github.com/mark3labs/mcp-go/mcp"
 )
 
 func init() {
@@ -23,6 +24,7 @@ func init() {
 				if err = mcpClient.Start(consts.Ctx); err != nil {
 					return
 				}
+				mcpClient.Initialize(consts.Ctx, mcp.InitializeRequest{})
 				return
 			}()
 			if err != nil {

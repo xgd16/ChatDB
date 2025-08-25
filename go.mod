@@ -6,6 +6,7 @@ require (
 	github.com/cloudwego/eino v0.4.5
 	github.com/cloudwego/eino-ext/components/model/deepseek v0.0.0-20250822023757-dbf41c9449b9
 	github.com/cloudwego/eino-ext/components/model/openai v0.0.0-20250822023757-dbf41c9449b9
+	github.com/cloudwego/eino-ext/components/tool/mcp v0.0.3
 	github.com/gogf/gf/contrib/drivers/mysql/v2 v2.9.0
 	github.com/gogf/gf/contrib/drivers/sqlite/v2 v2.9.0
 	github.com/gogf/gf/v2 v2.9.0

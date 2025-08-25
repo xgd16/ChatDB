@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"ai-chat-sql/internal/consts"
 	"ai-chat-sql/internal/model"
 	"ai-chat-sql/internal/service"
 	"context"
@@ -8,7 +9,9 @@ import (
 	"fmt"
 	"io"
 
-	einoModel "github.com/cloudwego/eino/components/model"
+	"github.com/cloudwego/eino-ext/components/tool/mcp"
+	"github.com/cloudwego/eino/compose"
+	"github.com/cloudwego/eino/flow/agent/react"
 	"github.com/cloudwego/eino/schema"
 )
 
@@ -24,16 +27,30 @@ func NewAiChat() *sAiChat {
 
 // Chat 聊天
 func (s *sAiChat) Chat(ctx context.Context, in model.ChatInput) (respChan chan any, err error) {
-	chatModel, err := service.AI().GetChatModel(in.Ai)
+	llm, err := service.AI().GetChatModel(in.Ai)
 	if err != nil {
 		return
 	}
-	out, err := chatModel.Stream(ctx, []*schema.Message{
+	// 获取MCP工具
+	mcpTools, err := mcp.GetTools(ctx, &mcp.Config{Cli: consts.McpClient})
+	if err != nil {
+		return
+	}
+	// 创建React智能体
+	aiAgent, err := react.NewAgent(ctx, &react.AgentConfig{
+		ToolCallingModel: llm,
+		ToolsConfig:      compose.ToolsNodeConfig{Tools: mcpTools},
+	})
+	if err != nil {
+		return
+	}
+
+	out, err := aiAgent.Stream(ctx, []*schema.Message{
 		{
 			Role:    schema.User,
 			Content: in.Prompt,
 		},
-	}, einoModel.WithModel(in.Model))
+	})
 	if err != nil {
 		return
 	}

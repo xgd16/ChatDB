@@ -25,7 +25,7 @@ func NewAI() *sAI {
 }
 
 // GetChatModel 获取聊天模型
-func (s *sAI) GetChatModel(ai string) (chatModel einoModel.BaseChatModel, err error) {
+func (s *sAI) GetChatModel(ai string) (chatModel einoModel.ToolCallingChatModel, err error) {
 	switch ai {
 	case "openai":
 		chatModel, err = openai.NewChatModel(consts.Ctx, &openai.ChatModelConfig{

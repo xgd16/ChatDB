@@ -27,6 +27,8 @@ github.com/cloudwego/eino-ext/components/model/deepseek v0.0.0-20250822023757-db
 github.com/cloudwego/eino-ext/components/model/deepseek v0.0.0-20250822023757-dbf41c9449b9/go.mod h1:hteZT6nmRQm4Ch10/+ajO3V48mfDDlN0/88TfMpYKBE=
 github.com/cloudwego/eino-ext/components/model/openai v0.0.0-20250822023757-dbf41c9449b9 h1:28OnhqhaI+qy0U+DchWAFKwOWllbgpyrAQpDUElgs5Q=
 github.com/cloudwego/eino-ext/components/model/openai v0.0.0-20250822023757-dbf41c9449b9/go.mod h1:CWcxcrqTmOfR9H08urLNUrPl9Q5Rd4ExgsTMnByeKjI=
+github.com/cloudwego/eino-ext/components/tool/mcp v0.0.3 h1:kT8yynQh8q92BPofkHxxnXslJUj5AKex5+NpMrd+BU4=
+github.com/cloudwego/eino-ext/components/tool/mcp v0.0.3/go.mod h1:D1Yircehgx7em8EH6vw8If+ATjtXl60IpBzVaqFBx3c=
 github.com/cloudwego/eino-ext/libs/acl/openai v0.0.0-20250821122458-ae35393076b3 h1:zv49eVRDsK6WmhRJv8AcrmfO+Io5g+dJaoSGo/NqoNY=
 github.com/cloudwego/eino-ext/libs/acl/openai v0.0.0-20250821122458-ae35393076b3/go.mod h1:nfqN4yOoMc4/EDRizyq14BRtmvOQNcs95aEMyho5RRI=
 github.com/cloudwego/iasm v0.2.0/go.mod h1:8rXZaNYT2n95jn+zTI1sDr+IgcD2GVs0nlbbQPiEFhY=
@@ -222,6 +224,8 @@ go.opentelemetry.io/otel/sdk v1.32.0 h1:RNxepc9vK59A8XsgZQouW8ue8Gkb4jpWtJm9ge5l
 go.opentelemetry.io/otel/sdk v1.32.0/go.mod h1:LqgegDBjKMmb2GC6/PrTnteJG39I8/vJCAP9LlJXEjU=
 go.opentelemetry.io/otel/trace v1.32.0 h1:WIC9mYrXf8TmY/EXuULKc8hR17vE+Hjv2cssQDe03fM=
 go.opentelemetry.io/otel/trace v1.32.0/go.mod h1:+i4rkvCraA+tG6AzwloGaCtkx53Fa+L+V8e9a7YvhT8=
+go.uber.org/mock v0.4.0 h1:VcM4ZOtdbR4f6VXfiOpwpVJDL6lCReaZ6mw31wqh7KU=
+go.uber.org/mock v0.4.0/go.mod h1:a6FSlNadKUHUa9IP5Vyt1zh4fC7uAwxMutEAscFbkZc=
 golang.org/x/arch v0.11.0 h1:KXV8WWKCXm6tRpLirl2szsO5j/oOODwZf4hATmGVNs4=
 golang.org/x/arch v0.11.0/go.mod h1:FEVrYAQjsQXMVJ1nsMoVVXPZg6p2JE2mx8psSWTDQys=
 golang.org/x/crypto v0.0.0-20180904163835-0709b304e793/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
