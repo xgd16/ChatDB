@@ -15,7 +15,7 @@ import (
 type (
 	IAI interface {
 		// GetChatModel 获取聊天模型
-		GetChatModel(ai string) (chatModel einoModel.ToolCallingChatModel, err error)
+		GetChatModel(ai string, model string) (chatModel einoModel.ToolCallingChatModel, err error)
 		// GetChatModeListJson 获取聊天模型列表
 		GetChatModeListJson(ctx context.Context, ai string) (json string, err error)
 	}

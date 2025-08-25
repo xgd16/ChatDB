@@ -27,7 +27,7 @@ func NewAiChat() *sAiChat {
 
 // Chat 聊天
 func (s *sAiChat) Chat(ctx context.Context, in model.ChatInput) (respChan chan any, err error) {
-	llm, err := service.AI().GetChatModel(in.Ai)
+	llm, err := service.AI().GetChatModel(in.Ai, in.Model)
 	if err != nil {
 		return
 	}

@@ -25,19 +25,25 @@ func NewAI() *sAI {
 }
 
 // GetChatModel 获取聊天模型
-func (s *sAI) GetChatModel(ai string) (chatModel einoModel.ToolCallingChatModel, err error) {
+func (s *sAI) GetChatModel(ai, model string) (chatModel einoModel.ToolCallingChatModel, err error) {
 	switch ai {
 	case "openai":
+		if model == "" {
+			model = "gpt-4o-mini"
+		}
 		chatModel, err = openai.NewChatModel(consts.Ctx, &openai.ChatModelConfig{
 			BaseURL: consts.Config.AiConfig.OpenAI.BaseUrl,
-			Model:   "gpt-4o-mini",
+			Model:   model,
 			APIKey:  consts.Config.AiConfig.OpenAI.Key,
 		})
 		return
 	case "deepseek":
+		if model == "" {
+			model = "deepseek-chat"
+		}
 		chatModel, err = deepseek.NewChatModel(consts.Ctx, &deepseek.ChatModelConfig{
 			BaseURL: consts.Config.AiConfig.DeepSeek.BaseUrl,
-			Model:   "deepseek-chat",
+			Model:   model,
 			APIKey:  consts.Config.AiConfig.DeepSeek.Key,
 		})
 		return
