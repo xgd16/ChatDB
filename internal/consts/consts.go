@@ -6,6 +6,7 @@ import (
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
+	mcpclient "github.com/mark3labs/mcp-go/client"
 )
 
 var (
@@ -13,6 +14,10 @@ var (
 	Logger       = g.Log()
 	SystemConfig *gjson.Json
 	Config       *model.ConfigData
+)
+
+var (
+	McpClient *mcpclient.Client
 )
 
 func init() {
