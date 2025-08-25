@@ -20,6 +20,7 @@ func (t *ConfigData) IsDebug() (ok bool) {
 type AiConfig struct {
 	OpenAI   *OpenAIConfig   `json:"openai"`
 	DeepSeek *DeepSeekConfig `json:"deepseek"`
+	Mcp      *McpConfig      `json:"mcp"`
 }
 
 type OpenAIConfig struct {
@@ -30,4 +31,8 @@ type OpenAIConfig struct {
 type DeepSeekConfig struct {
 	BaseUrl string `json:"baseUrl"`
 	Key     string `json:"key"`
+}
+
+type McpConfig struct {
+	Address string `json:"address"`
 }

@@ -7,5 +7,6 @@ package logic
 import (
 	_ "ai-chat-sql/internal/logic/ai"
 	_ "ai-chat-sql/internal/logic/config"
+	_ "ai-chat-sql/internal/logic/mcp"
 	_ "ai-chat-sql/internal/logic/middleware"
 )
