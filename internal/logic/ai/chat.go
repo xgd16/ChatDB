@@ -13,6 +13,7 @@ import (
 	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/flow/agent/react"
 	"github.com/cloudwego/eino/schema"
+	"github.com/gogf/gf/v2/util/gconv"
 )
 
 type sAiChat struct{}
@@ -46,6 +47,14 @@ func (s *sAiChat) Chat(ctx context.Context, in model.ChatInput) (respChan chan a
 	}
 
 	out, err := aiAgent.Stream(ctx, []*schema.Message{
+		{
+			Role:    schema.System,
+			Content: "任何情况下应优先使用工具来处理用户请求",
+		},
+		{
+			Role:    schema.System,
+			Content: "你是一个SQL执行器，你需要根据用户的需求，执行SQL语句，返回执行结果，在不了解数据库表的情况下优先获取表信息再去查，结果整理成不懂程序人也能看得懂的数据,用户用什么语言和你沟通你就将字段名称翻译成什么语言，语法是mysql databaseId: " + gconv.String(in.DatabaseId),
+		},
 		{
 			Role:    schema.User,
 			Content: in.Prompt,

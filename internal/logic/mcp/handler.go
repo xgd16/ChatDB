@@ -21,10 +21,26 @@ func NewMcpHandler() *sMcpHandler {
 
 func init() {
 	service.RegisterMcpHandler(NewMcpHandler())
+	service.RegisterMcpTool(NewMcpTool())
 }
 
 func (s *sMcpHandler) GetList() []model.McpReg {
 	return []model.McpReg{
+		{
+			Name:        "SQL_Actuator",
+			Description: "Convert the user's requirements into SQL statements, execute the SQL statements, and return the execution results",
+			ToolOptions: []mcp.ToolOption{
+				mcp.WithString("databaseId",
+					mcp.Required(),
+					mcp.Description("The ID of the database to operate on (databaseId)"),
+				),
+				mcp.WithString("sql",
+					mcp.Required(),
+					mcp.Description("The SQL statement to be executed"),
+				),
+			},
+			Fn: service.McpTool().ExecSql,
+		},
 		{
 			Name:        "hello_world",
 			Description: "Say hello to someone",
@@ -62,4 +78,10 @@ func (s *sMcpHandler) SayHello(ctx context.Context, request mcp.CallToolRequest)
 		return nil, errors.New("name must be a string")
 	}
 	return mcp.NewToolResultText(fmt.Sprintf("Hello, %s!", name)), nil
+}
+
+type sMcpTool struct{}
+
+func NewMcpTool() *sMcpTool {
+	return &sMcpTool{}
 }

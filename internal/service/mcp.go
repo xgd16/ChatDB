@@ -19,10 +19,15 @@ type (
 		GetMcpFn(item *model.McpReg) server.ToolHandlerFunc
 		SayHello(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error)
 	}
+	IMcpTool interface {
+		// ExecSql 执行SQL
+		ExecSql(ctx context.Context, request mcp.CallToolRequest) (out *mcp.CallToolResult, err error)
+	}
 )
 
 var (
 	localMcpHandler IMcpHandler
+	localMcpTool    IMcpTool
 )
 
 func McpHandler() IMcpHandler {
@@ -34,4 +39,15 @@ func McpHandler() IMcpHandler {
 
 func RegisterMcpHandler(i IMcpHandler) {
 	localMcpHandler = i
+}
+
+func McpTool() IMcpTool {
+	if localMcpTool == nil {
+		panic("implement not found for interface IMcpTool, forgot register?")
+	}
+	return localMcpTool
+}
+
+func RegisterMcpTool(i IMcpTool) {
+	localMcpTool = i
 }

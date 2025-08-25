@@ -32,6 +32,7 @@ func init() {
 				time.Sleep(500 * time.Millisecond)
 			} else {
 				consts.Logger.Info(consts.Ctx, "初始化 MCP 客户端成功")
+				tryErr = nil
 				break
 			}
 		}
