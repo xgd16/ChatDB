@@ -39,6 +39,17 @@ func (s *sMcpHandler) GetList() []model.McpReg {
 			},
 			Fn: service.McpTool().ExecSql,
 		},
+		{
+			Name:        "NowTime",
+			Description: "Get the current time in the Eastern 8th Time Zone",
+			ToolOptions: []mcp.ToolOption{
+				mcp.WithString("timeZone",
+					mcp.Required(),
+					mcp.Description("The time zone to be used (e.g. 'Asia/Shanghai')"),
+				),
+			},
+			Fn: service.McpTool().GetNowTime,
+		},
 	}
 }
 

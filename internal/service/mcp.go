@@ -21,6 +21,7 @@ type (
 	IMcpTool interface {
 		// ExecSql 执行SQL
 		ExecSql(ctx context.Context, request mcp.CallToolRequest) (out *mcp.CallToolResult, err error)
+		GetNowTime(ctx context.Context, request mcp.CallToolRequest) (out *mcp.CallToolResult, err error)
 	}
 )
 
