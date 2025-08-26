@@ -22,6 +22,8 @@ type (
 		// ExecSql 执行SQL
 		ExecSql(ctx context.Context, request mcp.CallToolRequest) (out *mcp.CallToolResult, err error)
 		GetNowTime(ctx context.Context, request mcp.CallToolRequest) (out *mcp.CallToolResult, err error)
+		// TimestampToDateTime 时间戳转换为日期时间
+		TimestampToDateTime(ctx context.Context, request mcp.CallToolRequest) (out *mcp.CallToolResult, err error)
 	}
 )
 

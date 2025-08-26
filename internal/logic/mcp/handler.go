@@ -50,6 +50,17 @@ func (s *sMcpHandler) GetList() []model.McpReg {
 			},
 			Fn: service.McpTool().GetNowTime,
 		},
+		{
+			Name:        "TimestampToDateTime",
+			Description: "Convert a timestamp to a date and time",
+			ToolOptions: []mcp.ToolOption{
+				mcp.WithString("timestamp",
+					mcp.Required(),
+					mcp.Description("The timestamp to be converted"),
+				),
+			},
+			Fn: service.McpTool().TimestampToDateTime,
+		},
 	}
 }
 
