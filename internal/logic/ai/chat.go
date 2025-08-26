@@ -36,11 +36,13 @@ func (s *sAiChat) Chat(ctx context.Context, in model.ChatInput) (respChan chan a
 
 	llm, err := service.AI().GetChatModel(in.Ai, in.Model)
 	if err != nil {
+		cancel()
 		return
 	}
 	// 获取MCP工具
 	mcpTools, err := mcp.GetTools(ctx, &mcp.Config{Cli: consts.McpClient})
 	if err != nil {
+		cancel()
 		return
 	}
 	// 创建React智能体
@@ -50,6 +52,7 @@ func (s *sAiChat) Chat(ctx context.Context, in model.ChatInput) (respChan chan a
 		MaxStep:          50,
 	})
 	if err != nil {
+		cancel()
 		return
 	}
 	// 获取需要操作的数据库信息
@@ -58,11 +61,13 @@ func (s *sAiChat) Chat(ctx context.Context, in model.ChatInput) (respChan chan a
 		Name:     "db_type:" + gconv.String(in.DatabaseId),
 	}).Where("database_id = ?", in.DatabaseId).Value("db_type")
 	if err != nil {
+		cancel()
 		return
 	}
 
 	prompt, err := service.Prompt().GetPrompt(ctx, consts.PromptMain)
 	if err != nil {
+		cancel()
 		return
 	}
 	if g.IsEmpty(in.Prompt) {
@@ -83,6 +88,7 @@ func (s *sAiChat) Chat(ctx context.Context, in model.ChatInput) (respChan chan a
 		},
 	})
 	if err != nil {
+		cancel()
 		return
 	}
 
