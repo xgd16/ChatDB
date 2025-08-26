@@ -24,7 +24,7 @@ type (
 		AiChatStreamOut(ctx context.Context, respChan chan any, stream *schema.StreamReader[*schema.Message], cancel context.CancelFunc)
 		AiChatHeartbeat(ctx context.Context, respChan chan any)
 		// Chat 聊天
-		Chat(ctx context.Context, in model.ChatInput) (respChan chan any, err error)
+		Chat(ctx context.Context, in model.ChatInput, respChan chan any)
 	}
 )
 
