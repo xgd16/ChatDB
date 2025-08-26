@@ -41,7 +41,7 @@ func (s *sMcpHandler) GetList() []model.McpReg {
 		},
 		{
 			Name:        "NowTime",
-			Description: "Get the current time in the Eastern 8th Time Zone",
+			Description: "Obtain the current time information，Return the timestamp and date time in the specified time zone",
 			ToolOptions: []mcp.ToolOption{
 				mcp.WithString("timeZone",
 					mcp.Required(),

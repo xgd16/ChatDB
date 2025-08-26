@@ -12,7 +12,12 @@ import (
 
 func (s *sMcpTool) GetNowTime(ctx context.Context, request mcp.CallToolRequest) (out *mcp.CallToolResult, err error) {
 	now := gtime.Now()
-
+	// 获取指定时区
+	// timezone := request.GetString("timezone", "Asia/Shanghai")
+	// location, err := time.LoadLocation(timezone)
+	// if err != nil {
+	// 	return
+	// }
 	out = mcp.NewToolResultText(gjson.MustEncodeString(g.Map{
 		"datetime":        now.Format("Y-m-d H:i:s"),
 		"UnixMillisecond": now.UnixMilli(),
