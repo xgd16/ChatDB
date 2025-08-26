@@ -13,7 +13,7 @@ import (
 )
 
 func TestAi_OpenAI(t *testing.T) {
-	chatModel, err := service.AI().GetChatModel("openai")
+	chatModel, err := service.AI().GetChatModel("openai", "")
 	gtest.AssertNil(err)
 	g.DumpWithType(chatModel.Generate(consts.Ctx, []*schema.Message{
 		{
@@ -24,7 +24,7 @@ func TestAi_OpenAI(t *testing.T) {
 }
 
 func TestAi_DeepSeek(t *testing.T) {
-	chatModel, err := service.AI().GetChatModel("deepseek")
+	chatModel, err := service.AI().GetChatModel("deepseek", "")
 	gtest.AssertNil(err)
 	g.DumpWithType(chatModel.Generate(consts.Ctx, []*schema.Message{
 		{

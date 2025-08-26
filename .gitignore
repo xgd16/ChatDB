@@ -21,3 +21,4 @@ log
 test/config.*
 test/log
 *.sqlite3
+test/prompt
