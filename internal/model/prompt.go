@@ -8,7 +8,6 @@ type PromptGetListOutputItem struct {
 	Content  string `json:"content"`
 }
 
-func (s *PromptGetListOutputItem) SetParams(data ...any) *PromptGetListOutputItem {
-	s.Content = fmt.Sprintf(s.Content, data...)
-	return s
+func (s *PromptGetListOutputItem) GetContent(data ...any) string {
+	return fmt.Sprintf(s.Content, data...)
 }

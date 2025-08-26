@@ -1,8 +1,10 @@
 package prompt
 
 import (
+	"ai-chat-sql/internal/consts"
 	"ai-chat-sql/internal/model"
 	"ai-chat-sql/internal/service"
+	"ai-chat-sql/utility"
 	"context"
 	"errors"
 	"sync"
@@ -28,7 +30,10 @@ func NewPrompt() *sPrompt {
 }
 
 func init() {
-	service.RegisterPrompt(NewPrompt())
+	s := NewPrompt()
+	_, err := s.GetList(consts.Ctx)
+	utility.PanicErr(err)
+	service.RegisterPrompt(s)
 }
 
 // GetList 获取提示词列表
