@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"errors"
 
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/frame/g"
@@ -29,6 +30,7 @@ func (s *sMcpTool) GetNowTime(ctx context.Context, request mcp.CallToolRequest) 
 func (s *sMcpTool) TimestampToDateTime(ctx context.Context, request mcp.CallToolRequest) (out *mcp.CallToolResult, err error) {
 	timestamp := request.GetString("timestamp", "")
 	if timestamp == "" {
+		err = errors.New("timestamp is empty")
 		return
 	}
 	gtime.NewFromTimeStamp(gconv.Int64(timestamp)).Format("Y-m-d H:i:s")
