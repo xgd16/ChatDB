@@ -7,3 +7,10 @@ type ChatInput struct {
 	Message    string `json:"message" v:"required#消息不能为空" dc:"消息"`
 	DatabaseId int    `json:"databaseId" v:"required#数据库配置ID不能为空" dc:"数据库配置ID"`
 }
+
+type ChatOutDataItem struct {
+	Event      string `json:"event"`
+	Role       string `json:"role,omitempty"`
+	Content    string `json:"content"`
+	CreateTime int64  `json:"createTime"`
+}

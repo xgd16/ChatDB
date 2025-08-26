@@ -2,6 +2,7 @@ package ai
 
 import (
 	"ai-chat-sql/internal/consts"
+	"ai-chat-sql/internal/model"
 	"context"
 	"errors"
 	"fmt"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/cloudwego/eino/schema"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/gogf/gf/v2/util/gconv"
 )
 
 func (s *sAiChat) AiChatStreamOut(ctx context.Context, respChan chan any, stream *schema.StreamReader[*schema.Message], cancel context.CancelFunc) {
@@ -29,7 +32,12 @@ func (s *sAiChat) AiChatStreamOut(ctx context.Context, respChan chan any, stream
 
 			// 发送chunk到通道
 			select {
-			case respChan <- chunk:
+			case respChan <- model.ChatOutDataItem{
+				Event:      "message",
+				Role:       gconv.String(chunk.Role),
+				Content:    chunk.Content,
+				CreateTime: gtime.TimestampMilli(),
+			}:
 			case <-ctx.Done():
 				close(respChan)
 				return
