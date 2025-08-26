@@ -1,9 +1,9 @@
 package model
 
 import (
-	"encoding/json"
+	"context"
 
-	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
 )
 
@@ -17,34 +17,21 @@ type ChatInput struct {
 
 type ChatOutDataItem struct {
 	Event      string `json:"event"`
+	TraceId    string `json:"traceId,omitempty"`
 	Role       string `json:"role,omitempty"`
 	Content    string `json:"content,omitempty"`
 	Data       string `json:"data,omitempty"`
 	CreateTime int64  `json:"createTime"`
 }
 
-func GenChatOutDataItem(event, role string, data any) (ChatOutDataItem, error) {
-	contextData := ""
-	if !g.IsEmpty(data) {
-		jsonData, err := json.Marshal(data)
-		if err != nil {
-			return ChatOutDataItem{}, err
-		}
-		contextData = string(jsonData)
-	}
-	return ChatOutDataItem{
-		Event:      event,
-		Role:       role,
-		Data:       contextData,
-		CreateTime: gtime.TimestampMilli(),
-	}, nil
+func GenChatOutDataItem(ctx context.Context, in ChatOutDataItem) ChatOutDataItem {
+	in.TraceId = gctx.CtxId(ctx)
+	in.CreateTime = gtime.TimestampMilli()
+	return in
 }
 
-func SendChatOutDataItem(event, role string, data any, respChan chan any) (err error) {
-	item, err := GenChatOutDataItem(event, role, data)
-	if err != nil {
-		return
-	}
+func SendChatOutDataItem(ctx context.Context, in ChatOutDataItem, respChan chan any) (err error) {
+	item := GenChatOutDataItem(ctx, in)
 	respChan <- item
 	return
 }

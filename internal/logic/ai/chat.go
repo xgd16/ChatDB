@@ -37,7 +37,9 @@ func (s *sAiChat) Chat(ctx context.Context, in model.ChatInput, respChan chan an
 		}
 	}()
 	// 发送开始包
-	if err = model.SendChatOutDataItem("start", "", "", respChan); err != nil {
+	if err = model.SendChatOutDataItem(ctx, model.ChatOutDataItem{
+		Event: "start",
+	}, respChan); err != nil {
 		return
 	}
 	// 创建响应通道

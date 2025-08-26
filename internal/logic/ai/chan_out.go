@@ -11,7 +11,6 @@ import (
 
 	"github.com/cloudwego/eino/schema"
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
 )
 
@@ -22,7 +21,9 @@ func (s *sAiChat) AiChatStreamOut(ctx context.Context, respChan chan any, stream
 			chunk, err := stream.Recv()
 			if errors.Is(err, io.EOF) {
 				// 发送结束包
-				if err = model.SendChatOutDataItem("end", "", "", respChan); err != nil {
+				if err = model.SendChatOutDataItem(ctx, model.ChatOutDataItem{
+					Event: "end",
+				}, respChan); err != nil {
 					return
 				}
 				cancel()
@@ -36,12 +37,11 @@ func (s *sAiChat) AiChatStreamOut(ctx context.Context, respChan chan any, stream
 
 			// 发送chunk到通道
 			select {
-			case respChan <- model.ChatOutDataItem{
-				Event:      "message",
-				Role:       gconv.String(chunk.Role),
-				Content:    chunk.Content,
-				CreateTime: gtime.TimestampMilli(),
-			}:
+			case respChan <- model.GenChatOutDataItem(ctx, model.ChatOutDataItem{
+				Event:   "message",
+				Content: chunk.Content,
+				Role:    gconv.String(chunk.Role),
+			}):
 			case <-ctx.Done():
 				close(respChan)
 				return
