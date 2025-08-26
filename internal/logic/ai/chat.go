@@ -29,6 +29,11 @@ func NewAiChat() *sAiChat {
 
 // Chat 聊天
 func (s *sAiChat) Chat(ctx context.Context, in model.ChatInput) (respChan chan any, err error) {
+	// 创建响应通道
+	respChan = make(chan any)
+	HeartbeatCtx, cancel := context.WithCancel(ctx)
+	s.AiChatHeartbeat(HeartbeatCtx, respChan)
+
 	llm, err := service.AI().GetChatModel(in.Ai, in.Model)
 	if err != nil {
 		return
@@ -81,10 +86,8 @@ func (s *sAiChat) Chat(ctx context.Context, in model.ChatInput) (respChan chan a
 		return
 	}
 
-	// 创建响应通道
-	respChan = make(chan any)
 	// AI输出流
-	s.AiChatStreamOut(ctx, respChan, out)
+	s.AiChatStreamOut(ctx, respChan, out, cancel)
 
 	return respChan, nil
 }
