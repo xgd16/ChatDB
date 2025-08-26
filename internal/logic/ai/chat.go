@@ -29,17 +29,22 @@ func NewAiChat() *sAiChat {
 
 // Chat 聊天
 func (s *sAiChat) Chat(ctx context.Context, in model.ChatInput, respChan chan any) {
-	// 创建响应通道
-	HeartbeatCtx, cancel := context.WithCancel(ctx)
-	s.AiChatHeartbeat(HeartbeatCtx, respChan)
-
-	llm, err := service.AI().GetChatModel(in.Ai, in.Model)
+	var err error
 	defer func() {
 		if err != nil {
 			respChan <- err
 			close(respChan)
 		}
 	}()
+	// 发送开始包
+	if err = model.SendChatOutDataItem("start", "", "", respChan); err != nil {
+		return
+	}
+	// 创建响应通道
+	HeartbeatCtx, cancel := context.WithCancel(ctx)
+	s.AiChatHeartbeat(HeartbeatCtx, respChan)
+
+	llm, err := service.AI().GetChatModel(in.Ai, in.Model)
 	if err != nil {
 		cancel()
 		return

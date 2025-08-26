@@ -21,6 +21,10 @@ func (s *sAiChat) AiChatStreamOut(ctx context.Context, respChan chan any, stream
 		for {
 			chunk, err := stream.Recv()
 			if errors.Is(err, io.EOF) {
+				// 发送结束包
+				if err = model.SendChatOutDataItem("end", "", "", respChan); err != nil {
+					return
+				}
 				cancel()
 				break
 			}
