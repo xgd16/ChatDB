@@ -20,7 +20,7 @@ type ChatOutDataItem struct {
 	TraceId    string `json:"traceId,omitempty"`
 	Role       string `json:"role,omitempty"`
 	Content    string `json:"content,omitempty"`
-	Data       string `json:"data,omitempty"`
+	Data       any    `json:"data,omitempty"`
 	CreateTime int64  `json:"createTime"`
 }
 

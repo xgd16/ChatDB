@@ -56,7 +56,13 @@ func (s *sAiChat) Chat(ctx context.Context, in model.ChatInput, respChan chan an
 	mcpTools, err := mcp.GetTools(ctx, &mcp.Config{
 		Cli: consts.McpClient,
 		ToolCallResultHandler: func(ctx context.Context, name string, result *gMcp.CallToolResult) (out *gMcp.CallToolResult, err error) {
-			g.Log().Info(ctx, "MCP工具调用", g.Map{"name": name, "result": result})
+			model.SendChatOutDataItem(ctx, model.ChatOutDataItem{
+				Event: "tool_call",
+				Data: g.Map{
+					"name":   name,
+					"output": result.Content[0],
+				},
+			}, respChan)
 			out = result
 			return
 		},
