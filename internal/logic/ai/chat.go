@@ -5,9 +5,6 @@ import (
 	"ai-chat-sql/internal/model"
 	"ai-chat-sql/internal/service"
 	"context"
-	"errors"
-	"fmt"
-	"io"
 
 	"github.com/cloudwego/eino-ext/components/tool/mcp"
 	"github.com/cloudwego/eino/compose"
@@ -66,29 +63,8 @@ func (s *sAiChat) Chat(ctx context.Context, in model.ChatInput) (respChan chan a
 
 	// 创建响应通道
 	respChan = make(chan any)
-
-	// 启动goroutine处理输出
-	go func() {
-		defer close(respChan)
-
-		for {
-			chunk, err := out.Recv()
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			if err != nil {
-				fmt.Printf("接收数据错误: %v\n", err)
-				return
-			}
-
-			// 发送chunk到通道
-			select {
-			case respChan <- chunk:
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
+	// AI输出流
+	s.AiChatStreamOut(ctx, respChan, out)
 
 	return respChan, nil
 }
