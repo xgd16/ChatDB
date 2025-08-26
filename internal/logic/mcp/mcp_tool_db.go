@@ -1,10 +1,12 @@
 package mcp
 
 import (
+	"ai-chat-sql/internal/consts"
 	"ai-chat-sql/internal/service"
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -27,6 +29,10 @@ func (s *sMcpTool) ExecSql(ctx context.Context, request mcp.CallToolRequest) (ou
 	}
 	sqlOut, err := db.Query(ctx, sql)
 	if err != nil {
+		outStr := fmt.Sprintf("数据库执行失败：%s", err.Error())
+		consts.Logger.Error(ctx, outStr)
+		out = mcp.NewToolResultText(outStr)
+		err = nil
 		return
 	}
 	jsonStr, err := json.Marshal(sqlOut)

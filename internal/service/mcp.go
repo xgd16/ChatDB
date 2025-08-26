@@ -17,7 +17,6 @@ type (
 	IMcpHandler interface {
 		GetList() []model.McpReg
 		GetMcpFn(item *model.McpReg) server.ToolHandlerFunc
-		SayHello(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error)
 	}
 	IMcpTool interface {
 		// ExecSql 执行SQL

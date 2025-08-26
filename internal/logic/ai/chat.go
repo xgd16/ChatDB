@@ -38,13 +38,13 @@ func (s *sAiChat) Chat(ctx context.Context, in model.ChatInput) (respChan chan a
 	aiAgent, err := react.NewAgent(ctx, &react.AgentConfig{
 		ToolCallingModel: llm,
 		ToolsConfig:      compose.ToolsNodeConfig{Tools: mcpTools},
+		MaxStep:          50,
 	})
 	if err != nil {
 		return
 	}
 
 	prompt, err := service.Prompt().GetPrompt(ctx, consts.PromptMain)
-	g.DumpWithType(prompt)
 	if err != nil {
 		return
 	}
