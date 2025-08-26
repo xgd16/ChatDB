@@ -3,8 +3,8 @@ package mcp
 import (
 	"ai-chat-sql/internal/consts"
 	"ai-chat-sql/internal/service"
+	"ai-chat-sql/utility"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -35,11 +35,12 @@ func (s *sMcpTool) ExecSql(ctx context.Context, request mcp.CallToolRequest) (ou
 		err = nil
 		return
 	}
-	jsonStr, err := json.Marshal(sqlOut)
+
+	respStr, err := utility.ConvertAnyToMarkdownTable(sqlOut.List())
 	if err != nil {
 		return
 	}
 	// g.DumpWithType(sqlOut)
-	out = mcp.NewToolResultText(string(jsonStr))
+	out = mcp.NewToolResultText(respStr)
 	return
 }

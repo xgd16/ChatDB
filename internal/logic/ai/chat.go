@@ -15,6 +15,7 @@ import (
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/gconv"
+	gMcp "github.com/mark3labs/mcp-go/mcp"
 )
 
 type sAiChat struct{}
@@ -52,7 +53,14 @@ func (s *sAiChat) Chat(ctx context.Context, in model.ChatInput, respChan chan an
 		return
 	}
 	// 获取MCP工具
-	mcpTools, err := mcp.GetTools(ctx, &mcp.Config{Cli: consts.McpClient})
+	mcpTools, err := mcp.GetTools(ctx, &mcp.Config{
+		Cli: consts.McpClient,
+		ToolCallResultHandler: func(ctx context.Context, name string, result *gMcp.CallToolResult) (out *gMcp.CallToolResult, err error) {
+			g.Log().Info(ctx, "MCP工具调用", g.Map{"name": name, "result": result})
+			out = result
+			return
+		},
+	})
 	if err != nil {
 		cancel()
 		return
