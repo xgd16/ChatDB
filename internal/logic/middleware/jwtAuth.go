@@ -5,6 +5,7 @@ import (
 	"ai-chat-sql/internal/model"
 	"ai-chat-sql/internal/service"
 	"context"
+	"net/http"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -28,6 +29,7 @@ func (s *sMiddleware) JwtAuth(subject string) func(r *ghttp.Request) {
 		authorization := r.GetHeader("authorization")
 		token := gstr.TrimLeft(authorization, "Bearer ")
 		if token == "" {
+			r.Response.Status = http.StatusUnauthorized
 			r.Response.WriteJsonExit(g.Map{
 				"code":        code.InvalidToken.Code(),
 				"message":     code.InvalidToken.Message(),
@@ -40,6 +42,7 @@ func (s *sMiddleware) JwtAuth(subject string) func(r *ghttp.Request) {
 		})
 
 		if err != nil {
+			r.Response.Status = http.StatusUnauthorized
 			r.Response.WriteJsonExit(g.Map{
 				"code":        code.FailedToRequest.Code(),
 				"message":     code.FailedToRequest.Message(),
@@ -47,6 +50,7 @@ func (s *sMiddleware) JwtAuth(subject string) func(r *ghttp.Request) {
 			})
 		}
 		if !v {
+			r.Response.Status = http.StatusUnauthorized
 			r.Response.WriteJsonExit(g.Map{
 				"code":        code.InvalidToken.Code(),
 				"message":     code.InvalidToken.Message(),
