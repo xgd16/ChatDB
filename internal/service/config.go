@@ -6,6 +6,7 @@
 package service
 
 import (
+	"ai-chat-sql/internal/model"
 	"context"
 
 	"github.com/gogf/gf/v2/database/gdb"
@@ -22,6 +23,8 @@ type (
 		// pgsql:root:12345678@tcp(127.0.0.1:5432)/test
 		// sqlite::@file(/var/data/db.sqlite3)
 		GenDataBaseLink(ctx context.Context, databaseId int) (link string, err error)
+		// GetJwtOptions 获取JWT配置
+		GetJwtOptions(ctx context.Context, secret string) (option *model.JwtOption, err error)
 	}
 )
 

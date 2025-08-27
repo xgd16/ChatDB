@@ -11,6 +11,8 @@ import (
 
 type (
 	IMiddleware interface {
+		// JwtAuth 校验jwt
+		JwtAuth(subject string) func(r *ghttp.Request)
 		// HandlerResponse 处理 Http 请求返回结果
 		HandlerResponse(r *ghttp.Request)
 	}

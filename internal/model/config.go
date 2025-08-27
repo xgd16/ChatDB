@@ -3,6 +3,7 @@ package model
 type ConfigData struct {
 	Server   *ServerConfig `json:"server"`
 	AiConfig *AiConfig     `json:"ai"`
+	Jwt      []*JwtOption  `json:"jwt" dc:"JWT配置"`
 }
 
 // ServerConfig 服务配置

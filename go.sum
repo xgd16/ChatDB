@@ -77,6 +77,8 @@ github.com/gogf/gf/contrib/drivers/sqlite/v2 v2.9.0 h1:8dg4KHNBJ8OmIfRCGnN5zrP13
 github.com/gogf/gf/contrib/drivers/sqlite/v2 v2.9.0/go.mod h1:hr3GNf9+LJs9TbjEGb7vEGOg2YWfrJBLrXgOcerKRlU=
 github.com/gogf/gf/v2 v2.9.0 h1:semN5Q5qGjDQEv4620VzxcJzJlSD07gmyJ9Sy9zfbHk=
 github.com/gogf/gf/v2 v2.9.0/go.mod h1:sWGQw+pLILtuHmbOxoe0D+0DdaXxbleT57axOLH2vKI=
+github.com/golang-jwt/jwt/v5 v5.3.0 h1:pv4AsKCKKZuqlgs5sUmn4x8UlGa0kEVt/puTpKx9vvo=
+github.com/golang-jwt/jwt/v5 v5.3.0/go.mod h1:fxCRLWMO43lRc8nhHWY6LGqRcf+1gQWArsqaEUEa5bE=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=

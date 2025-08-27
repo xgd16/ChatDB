@@ -10,6 +10,7 @@ require (
 	github.com/gogf/gf/contrib/drivers/mysql/v2 v2.9.0
 	github.com/gogf/gf/contrib/drivers/sqlite/v2 v2.9.0
 	github.com/gogf/gf/v2 v2.9.0
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/mark3labs/mcp-go v0.38.0
 )
 
