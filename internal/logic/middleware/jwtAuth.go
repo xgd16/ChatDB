@@ -27,6 +27,13 @@ func (s *sMiddleware) JwtAuth(subject string) func(r *ghttp.Request) {
 		ctx := r.GetCtx()
 		authorization := r.GetHeader("authorization")
 		token := gstr.TrimLeft(authorization, "Bearer ")
+		if token == "" {
+			r.Response.WriteJsonExit(g.Map{
+				"code":        code.InvalidToken.Code(),
+				"message":     code.InvalidToken.Message(),
+				"serviceTime": gtime.Now().UnixMilli(),
+			})
+		}
 		data, v, err := service.Jwt().VerifyToken(ctx, &model.JWTVerifyTokenInput{
 			Token:   token,
 			Subject: subject,
