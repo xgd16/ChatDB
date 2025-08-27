@@ -27,7 +27,7 @@ func (s *sMiddleware) JwtAuth(subject string) func(r *ghttp.Request) {
 
 		ctx := r.GetCtx()
 		authorization := r.GetHeader("authorization")
-		token := gstr.TrimLeft(authorization, "Bearer ")
+		token := gstr.Replace(authorization, "Bearer ", "")
 		if token == "" {
 			r.Response.Status = http.StatusUnauthorized
 			r.Response.WriteJsonExit(g.Map{
