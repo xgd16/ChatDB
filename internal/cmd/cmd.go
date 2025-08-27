@@ -20,7 +20,7 @@ var (
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
 			s := g.Server()
 			s.Group("/api/v1", func(group *ghttp.RouterGroup) {
-				group.Middleware(service.Middleware().HandlerResponse)
+				group.Middleware(service.Middleware().HandlerResponse, ghttp.MiddlewareCORS)
 
 				{
 					authGroup := group.Clone()

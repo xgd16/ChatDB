@@ -23,3 +23,5 @@ test/log
 *.sqlite3
 test/prompt
 private.key
+
+./chat-db-web/node_modules
