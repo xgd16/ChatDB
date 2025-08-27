@@ -2,8 +2,10 @@ package user
 
 import (
 	"ai-chat-sql/internal/code"
+	"ai-chat-sql/internal/consts"
 	"ai-chat-sql/internal/dao"
 	"ai-chat-sql/internal/model"
+	"ai-chat-sql/internal/model/entity"
 	"ai-chat-sql/internal/service"
 	"context"
 	"fmt"
@@ -58,9 +60,30 @@ func (s *sUser) Register(ctx context.Context, verify bool, in model.UserRegister
 	userId, err = dao.User.Ctx(ctx).Data(g.Map{
 		"username":   in.Username,
 		"password":   password,
-		"code":       code,
+		"verify":     code,
 		"rule_level": 1,
 	}).InsertAndGetId()
+	return
+}
+
+// GenJwtTokenByUserId 根据用户ID生成JWT
+func (s *sUser) GenJwtTokenByUserId(ctx context.Context, userId int64) (out *model.JWTGenTokenOutput, err error) {
+	var UserItem *entity.User
+	if err = dao.User.Ctx(ctx).Where(dao.User.Columns().UserId, userId).Scan(&UserItem); err != nil {
+		return
+	}
+	if g.IsNil(UserItem) {
+		err = code.ToError(code.UserNotExist)
+		return
+	}
+
+	out, err = service.Jwt().GenToken(ctx, &model.JWTGenTokenInput{
+		Id:      userId,
+		Subject: consts.JwtSubjectUser,
+	})
+	if err != nil {
+		return
+	}
 	return
 }
 

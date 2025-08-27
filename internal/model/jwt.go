@@ -6,8 +6,8 @@ type JWTGenTokenInput struct {
 }
 
 type JWTGenTokenOutput struct {
-	Token  string `json:"token" dc:"token"`
-	Expire int64  `json:"expire" dc:"过期时间"`
+	Token  string `json:"token,omitempty" dc:"token"`
+	Expire int64  `json:"expire,omitempty" dc:"过期时间"`
 }
 
 type JWTVerifyTokenInput struct {

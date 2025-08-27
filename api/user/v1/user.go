@@ -20,4 +20,5 @@ type UserRegisterReq struct {
 }
 
 type UserRegisterRes struct {
+	model.JWTGenTokenOutput
 }

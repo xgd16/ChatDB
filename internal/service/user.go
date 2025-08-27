@@ -16,6 +16,8 @@ type (
 		Login(ctx context.Context, in model.UserLoginInput) (err error)
 		// Register 注册用户
 		Register(ctx context.Context, verify bool, in model.UserRegisterInput) (userId int64, err error)
+		// GenJwtTokenByUserId 根据用户ID生成JWT
+		GenJwtTokenByUserId(ctx context.Context, userId int64) (out *model.JWTGenTokenOutput, err error)
 		// GenPassword 生成密码
 		GenPassword(password string, code int) (out string, err error)
 		// GetUserVerifyCode 获取用户验证码
