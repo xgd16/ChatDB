@@ -7,13 +7,14 @@ package service
 
 import (
 	"ai-chat-sql/internal/model"
+	"ai-chat-sql/internal/model/entity"
 	"context"
 )
 
 type (
 	IUser interface {
 		// Login 登录
-		Login(ctx context.Context, in model.UserLoginInput) (err error)
+		Login(ctx context.Context, in model.UserLoginInput) (user *entity.User, out *model.JWTGenTokenOutput, err error)
 		// Register 注册用户
 		Register(ctx context.Context, verify bool, in model.UserRegisterInput) (userId int64, err error)
 		// GenJwtTokenByUserId 根据用户ID生成JWT

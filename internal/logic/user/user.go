@@ -27,8 +27,22 @@ func init() {
 }
 
 // Login 登录
-func (s *sUser) Login(ctx context.Context, in model.UserLoginInput) (err error) {
-
+func (s *sUser) Login(ctx context.Context, in model.UserLoginInput) (user *entity.User, out *model.JWTGenTokenOutput, err error) {
+	// 验证用户名是否存在
+	user, err = dao.User.GetUserInfoByUsername(ctx, in.Username)
+	if err != nil {
+		return
+	}
+	// 验证密码是否正确
+	password, err := s.GenPassword(in.Password, user.Verify)
+	if err != nil {
+		return
+	}
+	if user.Password != password {
+		err = code.ToError(code.LoginFailMessage)
+		return
+	}
+	out, err = s.GenJwtTokenByUserId(ctx, int64(user.UserId))
 	return
 }
 
@@ -68,15 +82,6 @@ func (s *sUser) Register(ctx context.Context, verify bool, in model.UserRegister
 
 // GenJwtTokenByUserId 根据用户ID生成JWT
 func (s *sUser) GenJwtTokenByUserId(ctx context.Context, userId int64) (out *model.JWTGenTokenOutput, err error) {
-	var UserItem *entity.User
-	if err = dao.User.Ctx(ctx).Where(dao.User.Columns().UserId, userId).Scan(&UserItem); err != nil {
-		return
-	}
-	if g.IsNil(UserItem) {
-		err = code.ToError(code.UserNotExist)
-		return
-	}
-
 	out, err = service.Jwt().GenToken(ctx, &model.JWTGenTokenInput{
 		Id:      userId,
 		Subject: consts.JwtSubjectUser,

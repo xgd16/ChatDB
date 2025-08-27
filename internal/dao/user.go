@@ -5,7 +5,12 @@
 package dao
 
 import (
+	"ai-chat-sql/internal/code"
 	"ai-chat-sql/internal/dao/internal"
+	"ai-chat-sql/internal/model/entity"
+	"context"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 // userDao is the data access object for the table user.
@@ -20,3 +25,27 @@ var (
 )
 
 // Add your custom methods and functionality below.
+
+// GetUserInfoById 根据用户id获取用户信息
+func (s *userDao) GetUserInfoById(ctx context.Context, userId int64) (user *entity.User, err error) {
+	if err = s.Ctx(ctx).Where(s.Columns().UserId, userId).Scan(&user); err != nil {
+		return
+	}
+	if g.IsNil(user) {
+		err = code.ToError(code.UserNotExist)
+		return
+	}
+	return
+}
+
+// GetUserInfoByUsername 根据用户名获取用户信息
+func (s *userDao) GetUserInfoByUsername(ctx context.Context, username string) (user *entity.User, err error) {
+	if err = s.Ctx(ctx).Where(s.Columns().Username, username).Scan(&user); err != nil {
+		return
+	}
+	if g.IsNil(user) {
+		err = code.ToError(code.LoginFailMessage)
+		return
+	}
+	return
+}

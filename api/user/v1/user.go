@@ -12,6 +12,8 @@ type UserLoginReq struct {
 }
 
 type UserLoginRes struct {
+	model.JWTGenTokenOutput
+	model.User
 }
 
 type UserRegisterReq struct {
