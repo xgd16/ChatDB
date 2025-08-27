@@ -20,6 +20,12 @@ var (
 	McpClient *mcpclient.Client
 )
 
+var (
+	PrivateKey string = ""
+)
+
+const JwtSubjectUser = "ai-chat-user"
+
 func init() {
 	if err := initSystemConfig(); err != nil {
 		panic(err)

@@ -16,6 +16,8 @@ var (
 	EmailExist       = newCode("邮箱已存在", &baseStartCode)
 	PhoneExist       = newCode("手机已存在", &baseStartCode)
 	HttpError        = newCode("HTTP请求错误", &baseStartCode)
+	PrivateKeyError  = newCode("没有权限执行此操作", &baseStartCode)
+	UsernameExist    = newCode("用户名已存在", &baseStartCode)
 )
 
 // 需要记录到日志

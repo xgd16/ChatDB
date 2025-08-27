@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"ai-chat-sql/internal/consts"
 	"ai-chat-sql/internal/controller/ai_chat"
+	"ai-chat-sql/internal/controller/user"
 	"ai-chat-sql/internal/service"
 	"context"
 
@@ -19,7 +21,12 @@ var (
 			s := g.Server()
 			s.Group("/api/v1", func(group *ghttp.RouterGroup) {
 				group.Middleware(service.Middleware().HandlerResponse)
-				group.Bind(ai_chat.NewV1())
+
+				{
+					authGroup := group.Clone()
+					authGroup.Middleware(service.Middleware().JwtAuth(consts.JwtSubjectUser)).
+						Bind(ai_chat.NewV1(), user.NewV1())
+				}
 			})
 			s.Run()
 			return nil

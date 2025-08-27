@@ -11,4 +11,6 @@ import (
 	_ "ai-chat-sql/internal/logic/mcp"
 	_ "ai-chat-sql/internal/logic/middleware"
 	_ "ai-chat-sql/internal/logic/prompt"
+	_ "ai-chat-sql/internal/logic/system"
+	_ "ai-chat-sql/internal/logic/user"
 )
