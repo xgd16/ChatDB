@@ -1,12 +1,13 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
+import type { LoginRes } from '@/types/user'
 
-export const useCounterStore = defineStore('counter', () => {
-  const count = ref(0)
-  const doubleCount = computed(() => count.value * 2)
-  function increment() {
-    count.value++
-  }
-
-  return { count, doubleCount, increment }
+export const useUserStore = defineStore("userInfo", {
+  state: () => ({} as LoginRes),
+  actions: {
+    setUserInfo(data: LoginRes) {
+      this.$state = data
+    }
+  },
+  persist: true
 })

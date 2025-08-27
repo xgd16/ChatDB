@@ -34,12 +34,12 @@
           </n-input>
         </n-form-item>
         
-        <div class="form-actions">
+        <!-- <div class="form-actions">
           <n-checkbox v-model:checked="formData.remember" class="remember-checkbox">
             记住我
           </n-checkbox>
           <n-button text class="forgot-btn">忘记密码？</n-button>
-        </div>
+        </div> -->
         
         <n-button
           type="primary"
