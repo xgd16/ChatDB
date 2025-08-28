@@ -7,6 +7,9 @@ export const useUserStore = defineStore("userInfo", {
   actions: {
     setUserInfo(data: LoginRes) {
       this.$state = data
+    },
+    isLogin() {
+      return !!this.$state.token
     }
   },
   persist: true

@@ -2,7 +2,7 @@
   <div class="login-container">
     <div class="login-form-wrapper">
       <div class="logo-area">
-        <h1 class="logo-title">AI 智能 SQL 助手</h1>
+        <h1 class="logo-title">问库</h1>
         <p class="logo-subtitle">让数据查询变得简单高效</p>
       </div>
       
@@ -66,6 +66,9 @@ import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { NForm, NFormItem, NInput, NButton, NCheckbox, NIcon } from 'naive-ui';
 import { loginApi } from '@/api/user';
+import { useUserStore } from '@/stores/counter';
+
+const userStore = useUserStore();
 
 const router = useRouter();
 const formRef = ref<InstanceType<typeof NForm>>();
@@ -108,18 +111,12 @@ const handleLogin = async () => {
     
     loginApi(formData).then(r => {
       if (r.code === 0) {
+        userStore.setUserInfo(r.data);
         router.push('/');
       }
     }).finally(() => {
       loading.value = false;
     })
-
-    // 模拟登录请求
-    // setTimeout(() => {
-    //   loading.value = false;
-    //   // 登录成功后跳转到首页
-    //   router.push('/');
-    // }, 1500);
   } catch (error) {
     console.error('登录验证失败:', error);
   }
