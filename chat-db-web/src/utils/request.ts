@@ -7,6 +7,7 @@ import type {
 import axios from "axios";
 import Router from "@/router";
 import { isJSON } from "./common";
+import { useUserStore } from "@/stores/counter";
 
 // Get current environment
 const isDev = import.meta.env.DEV;
@@ -14,7 +15,7 @@ const apiUrl = import.meta.env.VITE_API_URL;
 
 // Determine the base URL based on environment
 const domain = isDev
-  ? apiUrl || 'http://localhost:9431'  // Development fallback
+  ? ''  // Development: use proxy
   : apiUrl || window.location.origin;   // Production fallback
 
 if (import.meta.env.DEV) {
@@ -35,7 +36,11 @@ const request = axios.create({
 
 request.interceptors.request.use(
   function (config: InternalAxiosRequestConfig) {
-
+    // 添加 token 到请求头
+    const userStore = useUserStore();
+    if (userStore.token) {
+      config.headers.Authorization = `Bearer ${userStore.token}`;
+    }
     return config;
   },
   function (error: any) {
@@ -48,11 +53,6 @@ request.interceptors.request.use(
 // 添加响应拦截器
 request.interceptors.response.use(
   function (response: AxiosResponse) {
-    if (response.data.code != 1000) {
-      // ElMessage.warning(response.data.msg);
-    } /* else {
-        ElMessage.success(response.data.msg)
-    }*/
     // 成功返回时处理数据
     return response;
   },
@@ -66,7 +66,7 @@ request.interceptors.response.use(
     let isJson: boolean = isJSON(data);
     if (data && !isJson && error.response?.status == 404) {
       // ElMessage.error(data.msg ?? "操作出错");
-      Router.push("/login").then((r) => {});
+      Router.push("/login").then((r) => { });
     }
     if (data.code != 1000) {
       // ElMessage.error(data.msg);
@@ -79,8 +79,7 @@ request.interceptors.response.use(
 export interface Response<T = any> {
   code: number;
   data: T;
-  msg: string;
-  time: number;
+  message: string;
 }
 
 const req = async <T>(config: AxiosRequestConfig) => {

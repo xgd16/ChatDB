@@ -1,18 +1,31 @@
 <template>
-  <router-view />
+  <n-config-provider :theme="currentTheme">
+    <n-global-style />
+    <n-message-provider>
+      <router-view />
+    </n-message-provider>
+  </n-config-provider>
+  
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
+import { NConfigProvider, NGlobalStyle, NMessageProvider, darkTheme } from 'naive-ui';
+import { useThemeStore } from '@/stores/theme';
+
+const themeStore = useThemeStore();
 
 onMounted(() => {
-  // 可以在这里添加全局初始化逻辑
+  themeStore.initTheme();
+  // 应用启动日志
   console.log('AI Chat SQL 应用已启动');
 });
+
+const currentTheme = computed(() => (themeStore.isDark ? darkTheme : null));
 </script>
 
 <style>
-/* 全局样式 */
+/* 全局样式（不设定品牌色，使用 naive-ui 默认） */
 * {
   margin: 0;
   padding: 0;
@@ -26,4 +39,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+
 </style>
