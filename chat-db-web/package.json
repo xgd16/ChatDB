@@ -16,6 +16,7 @@
   "dependencies": {
     "@types/marked": "^6.0.0",
     "axios": "^1.11.0",
+    "gsap": "^3.13.0",
     "marked": "^16.2.1",
     "naive-ui": "^2.42.0",
     "pinia": "^3.0.3",

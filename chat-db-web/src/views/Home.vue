@@ -1,5 +1,6 @@
 <template>
   <div class="chat-container">
+    <BackgroundOrbs :orb-count="10" />
     <!-- 顶部工具栏 -->
     <div class="chat-header">
       <div class="header-left">
@@ -120,6 +121,7 @@ import {
 import UserAvatar from '@/components/icons/UserAvatar.vue';
 import AIAvatar from '@/components/icons/AIAvatar.vue';
 import ChatSettings from '@/components/ChatSettings.vue';
+import BackgroundOrbs from '@/components/BackgroundOrbs.vue';
 import { marked } from 'marked';
 import { chatApi, getDatabaseConfigList } from '@/api/ai';
 import type { ChatMessage } from '@/types/ai';
@@ -308,6 +310,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   background: var(--n-color);
+  position: relative; // 让绝对定位的光球容器定位于此
 }
 
 .chat-header {
@@ -369,7 +372,6 @@ onMounted(async () => {
 
     .message-text {
       background: var(--n-primary-color);
-      color: white;
       border-color: var(--n-primary-color);
     }
   }
@@ -404,9 +406,13 @@ onMounted(async () => {
 .message-text {
   padding: 12px 16px;
   border-radius: 12px;
-  background: var(--n-card-color);
+  background: var(--n-color-modal);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--n-border-color);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  opacity: 0.96;
   word-wrap: break-word;
+  transition: box-shadow 0.3s ease, transform 0.2s ease, background 0.3s ease;
 }
 
 .markdown-content {

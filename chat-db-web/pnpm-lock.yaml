@@ -14,6 +14,9 @@ importers:
       axios:
         specifier: ^1.11.0
         version: 1.11.0
+      gsap:
+        specifier: ^3.13.0
+        version: 3.13.0
       marked:
         specifier: ^16.2.1
         version: 16.2.1
@@ -977,6 +980,9 @@ packages:
   gopd@1.2.0:
     resolution: {integrity: sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==}
     engines: {node: '>= 0.4'}
+
+  gsap@3.13.0:
+    resolution: {integrity: sha512-QL7MJ2WMjm1PHWsoFrAQH/J8wUeqZvMtHO58qdekHpCfhvhSL4gSiz6vJf5EeMP0LOn3ZCprL2ki/gjED8ghVw==}
 
   has-flag@4.0.0:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
@@ -2487,6 +2493,8 @@ snapshots:
       is-stream: 4.0.1
 
   gopd@1.2.0: {}
+
+  gsap@3.13.0: {}
 
   has-flag@4.0.0: {}
 
