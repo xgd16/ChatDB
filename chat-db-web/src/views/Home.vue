@@ -41,36 +41,44 @@
               {{ message.role === 'user' ? '我' : 'AI 助手' }}
             </span>
             <span class="message-time">{{ formatTime(message.timestamp) }}</span>
+            <n-button
+              v-if="message.role === 'assistant' && (message as any).toolEvents && (message as any).toolEvents.length"
+              size="tiny"
+              quaternary
+              style="margin-left: 8px"
+              @click="(message as any).showToolPanel = !(message as any).showToolPanel"
+            >
+              <template #icon>
+                <i :class="(message as any).showToolPanel === false ? 'ri-eye-line' : 'ri-eye-off-line'"></i>
+              </template>
+              {{ (message as any).showToolPanel === false ? '显示流程' : '隐藏流程' }}
+            </n-button>
           </div>
+          <ToolUsagePanel
+            v-if="message.role === 'assistant' && (message as any).toolEvents && (message as any).toolEvents.length && (message as any).showToolPanel !== false"
+            :events="(message as any).toolEvents"
+            :loading="isLoading && index === messages.length - 1"
+            @close="(message as any).showToolPanel = false"
+            style="margin: 6px 0 10px 0;"
+          />
           <div class="message-text">
-            <div
-              v-if="message.role === 'assistant'"
-              class="markdown-content"
-              v-html="renderMarkdown(message.content)"
-            ></div>
+            <template v-if="message.role === 'assistant'">
+              <!-- 思考中：假进度条（内嵌在消息气泡内） -->
+              <div v-if="index === messages.length - 1 && isLoading && (!message.content || message.content.length === 0) && (!(message as any).toolEvents || (message as any).toolEvents.length === 0)" class="thinking-inline">
+                <div class="thinking-bar">
+                  <div class="thinking-bar-inner" :style="{ width: Math.round(thinkingProgress) + '%' }"></div>
+                  <div class="thinking-bar-percent">{{ Math.round(thinkingProgress) }}%</div>
+                </div>
+                <span class="thinking-text">正在思考...</span>
+              </div>
+              <div v-else class="markdown-content" v-html="renderMarkdown(message.content)"></div>
+            </template>
             <div v-else class="user-message">{{ message.content }}</div>
           </div>
         </div>
       </div>
       
-      <!-- 加载状态 -->
-      <div v-if="isLoading" class="message assistant">
-        <div class="message-avatar">
-          <AIAvatar :size="40" />
-        </div>
-        <div class="message-content">
-          <div class="message-header">
-            <span class="message-author">AI 助手</span>
-          </div>
-          <div class="message-text">
-            <n-spin size="small">
-              <template #description>
-                <span>正在思考中...</span>
-              </template>
-            </n-spin>
-          </div>
-        </div>
-      </div>
+      
     </div>
 
     <!-- 悬浮输入区域 -->
@@ -122,6 +130,7 @@ import UserAvatar from '@/components/icons/UserAvatar.vue';
 import AIAvatar from '@/components/icons/AIAvatar.vue';
 import ChatSettings from '@/components/ChatSettings.vue';
 import BackgroundOrbs from '@/components/BackgroundOrbs.vue';
+import ToolUsagePanel from '@/components/ToolUsagePanel.vue';
 import { marked } from 'marked';
 import { chatApi, getDatabaseConfigList } from '@/api/ai';
 import type { ChatMessage } from '@/types/ai';
@@ -134,15 +143,44 @@ const message = useMessage();
 const settingsStore = useSettingsStore();
 
 // 响应式数据
-const messages = ref<ChatMessage[]>([]);
+type ToolEvent = { name: string; output?: any; timestamp: number };
+type LocalChatMessage = ChatMessage & { toolEvents?: ToolEvent[]; showToolPanel?: boolean };
+const messages = ref<LocalChatMessage[]>([]);
 
 const inputMessage = ref('');
 const isLoading = ref(false);
 const isConnected = ref(true);
 const messagesContainer = ref<HTMLElement>();
 
+// 思考中进度条（假进度）
+const thinkingProgress = ref(0);
+let thinkingTimer: number | undefined;
+let hasReceivedFirstChunk = false;
+
+const startThinkingProgress = () => {
+  hasReceivedFirstChunk = false;
+  thinkingProgress.value = 5;
+  if (thinkingTimer) window.clearInterval(thinkingTimer);
+  thinkingTimer = window.setInterval(() => {
+    // 递增到 92% 封顶，避免太快结束
+    if (thinkingProgress.value < 92) {
+      thinkingProgress.value = Math.min(92, thinkingProgress.value + Math.random() * 4 + 2);
+    }
+  }, 120);
+};
+
+const finishThinkingProgress = () => {
+  if (thinkingTimer) {
+    window.clearInterval(thinkingTimer);
+    thinkingTimer = undefined;
+  }
+  thinkingProgress.value = 100;
+};
+
 // 设置抽屉
 const showSettings = ref(false);
+
+// 工具面板相关（改为每条消息内部控制 showToolPanel 与 toolEvents）
 
 // 配置 marked 选项
 marked.setOptions({
@@ -205,8 +243,18 @@ const handleSendMessage = async () => {
     timestamp: Date.now()
   });
 
+  // 预先添加占位的助手消息，用于显示“思考中”进度条
+  messages.value.push({
+    role: 'assistant',
+    content: '',
+    timestamp: Date.now(),
+    toolEvents: [],
+    showToolPanel: false
+  } as LocalChatMessage);
+
   await scrollToBottom();
   isLoading.value = true;
+  startThinkingProgress();
 
   try {
     // 调用 AI 聊天 API
@@ -241,7 +289,34 @@ const handleSendMessage = async () => {
         if (line.startsWith('data: ')) {
           try {
             const data = JSON.parse(line.slice(6));
+            if (data.event === 'tool_call') {
+              // 确保存在当前的助手消息
+              let lastMessage = messages.value[messages.value.length - 1];
+              if (!lastMessage || lastMessage.role !== 'assistant') {
+                lastMessage = {
+                  role: 'assistant',
+                  content: '',
+                  timestamp: Date.now(),
+                  toolEvents: [],
+                  showToolPanel: true
+                } as LocalChatMessage;
+                messages.value.push(lastMessage);
+              }
+              if (!lastMessage.toolEvents) lastMessage.toolEvents = [];
+              lastMessage.showToolPanel = true;
+              lastMessage.toolEvents.push({
+                name: data?.data?.name ?? '未知工具',
+                output: data?.data?.output,
+                timestamp: Date.now()
+              });
+              await scrollToBottom();
+              continue;
+            }
             if (data.event === 'message' && data.content) {
+              if (!hasReceivedFirstChunk) {
+                finishThinkingProgress();
+                hasReceivedFirstChunk = true;
+              }
               aiResponse += data.content;
               // 更新最后一条消息或创建新消息
               const lastMessage = messages.value[messages.value.length - 1];
@@ -251,7 +326,9 @@ const handleSendMessage = async () => {
                 messages.value.push({
                   role: 'assistant',
                   content: aiResponse,
-                  timestamp: Date.now()
+                  timestamp: Date.now(),
+                  toolEvents: [],
+                  showToolPanel: true
                 });
               }
               await scrollToBottom();
@@ -277,6 +354,7 @@ const handleSendMessage = async () => {
     });
   } finally {
     isLoading.value = false;
+    if (thinkingTimer) window.clearInterval(thinkingTimer);
     await scrollToBottom();
   }
 };
@@ -339,7 +417,6 @@ onMounted(async () => {
   border-radius: 12px;
   font-size: 12px;
   background: var(--n-error-color);
-  color: white;
 
   &.online {
     background: var(--n-success-color);
@@ -414,6 +491,48 @@ onMounted(async () => {
   word-wrap: break-word;
   transition: box-shadow 0.3s ease, transform 0.2s ease, background 0.3s ease;
 }
+
+/* 思考中假进度条（内联） */
+.thinking-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.thinking-bar {
+  position: relative;
+  width: 160px;
+  height: 10px;
+  background: var(--n-border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) inset, 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+.thinking-bar-inner {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--n-primary-color), var(--n-primary-color-hover));
+  transition: width 0.2s ease;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.08), 0 0 12px rgba(0, 0, 0, 0.06);
+}
+.thinking-bar-percent {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+.thinking-text {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--n-text-color-3);
+}
+/* 不再使用滑动动画，使用基于宽度的百分比 */
 
 .markdown-content {
   line-height: 1.6;
@@ -514,7 +633,6 @@ onMounted(async () => {
 
   :deep(thead) {
     background: linear-gradient(135deg, var(--n-primary-color), var(--n-primary-color-hover));
-    color: white;
     position: relative;
 
     &::before {
