@@ -11,7 +11,7 @@ const router = createRouter({
       name: 'login',
       component: LoginView,
       meta: {
-        title: '登录 - AI 智能 SQL 助手',
+        title: '登录',
         requiresAuth: false
       }
     },
@@ -20,7 +20,7 @@ const router = createRouter({
       name: 'home',
       component: HomeView,
       meta: {
-        title: 'AI 智能 SQL 助手',
+        title: '主页',
         requiresAuth: true
       }
     }
@@ -32,7 +32,7 @@ router.beforeEach((to, from, next) => {
   const userStore = useUserStore()
   // 设置页面标题
   if (to.meta.title) {
-    document.title = to.meta.title as string
+    document.title = '问库 - ' + (to.meta.title as string)
   }
   // 判断没有登录信息的话返回到登录页面
   if (!userStore.isLogin() && to.name !== 'login') {
