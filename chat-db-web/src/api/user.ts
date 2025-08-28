@@ -1,4 +1,4 @@
-import req, { type Response} from "@/utils/request";
+import req, { type Response } from "@/utils/request";
 import type { LoginReq, LoginRes } from "@/types/user";
 
 export const loginApi = (data: LoginReq) => {

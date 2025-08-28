@@ -8,6 +8,9 @@
         <span class="status" :class="{ online: isConnected }">
           {{ isConnected ? '已连接' : '未连接' }}
         </span>
+        <span class="username" v-if="userStore.username">
+          欢迎，{{ userStore.username }}
+        </span>
       </div>
       <div class="header-right">
         <n-button
@@ -18,6 +21,16 @@
         >
           <template #icon>
             <i class="ri-settings-3-line"></i>
+          </template>
+        </n-button>
+        <n-button
+          quaternary
+          circle
+          @click="handleLogout"
+          class="logout-btn"
+        >
+          <template #icon>
+            <i class="ri-logout-box-r-line"></i>
           </template>
         </n-button>
       </div>
@@ -41,18 +54,31 @@
               {{ message.role === 'user' ? '我' : 'AI 助手' }}
             </span>
             <span class="message-time">{{ formatTime(message.timestamp) }}</span>
-            <n-button
-              v-if="message.role === 'assistant' && (message as any).toolEvents && (message as any).toolEvents.length"
-              size="tiny"
-              quaternary
-              style="margin-left: 8px"
-              @click="(message as any).showToolPanel = !(message as any).showToolPanel"
-            >
-              <template #icon>
-                <i :class="(message as any).showToolPanel === false ? 'ri-eye-line' : 'ri-eye-off-line'"></i>
-              </template>
-              {{ (message as any).showToolPanel === false ? '显示流程' : '隐藏流程' }}
-            </n-button>
+            <div class="message-actions">
+              <n-button
+                v-if="message.role === 'assistant' && message.content"
+                size="tiny"
+                quaternary
+                @click="copyMessageContent(message.content)"
+                class="copy-btn"
+              >
+                <template #icon>
+                  <i class="ri-file-copy-line"></i>
+                </template>
+                复制
+              </n-button>
+              <n-button
+                v-if="message.role === 'assistant' && (message as any).toolEvents && (message as any).toolEvents.length"
+                size="tiny"
+                quaternary
+                @click="(message as any).showToolPanel = !(message as any).showToolPanel"
+              >
+                <template #icon>
+                  <i :class="(message as any).showToolPanel === false ? 'ri-eye-line' : 'ri-eye-off-line'"></i>
+                </template>
+                {{ (message as any).showToolPanel === false ? '显示流程' : '隐藏流程' }}
+              </n-button>
+            </div>
           </div>
           <ToolUsagePanel
             v-if="message.role === 'assistant' && (message as any).toolEvents && (message as any).toolEvents.length && (message as any).showToolPanel !== false"
@@ -135,12 +161,16 @@ import { marked } from 'marked';
 import { chatApi, getDatabaseConfigList } from '@/api/ai';
 import type { ChatMessage } from '@/types/ai';
 import { useSettingsStore } from '@/stores/settings';
+import { useUserStore } from '@/stores/counter';
+import { useRouter } from 'vue-router';
 
 // 消息提示
 const message = useMessage();
 
 // 设置相关
 const settingsStore = useSettingsStore();
+const userStore = useUserStore();
+const router = useRouter();
 
 // 响应式数据
 type ToolEvent = { name: string; output?: any; timestamp: number };
@@ -179,6 +209,39 @@ const finishThinkingProgress = () => {
 
 // 设置抽屉
 const showSettings = ref(false);
+
+// 退出登录
+const handleLogout = () => {
+  userStore.clearUserInfo();
+  // 清除本地存储的token
+  localStorage.removeItem('userInfo');
+  message.success('已退出登录');
+  router.push('/login');
+};
+
+// 复制消息内容
+const copyMessageContent = async (content: string) => {
+  try {
+    // 如果是markdown内容，直接复制原始文本
+    await navigator.clipboard.writeText(content);
+    message.success('内容已复制到剪贴板');
+  } catch (error) {
+    // 降级方案：使用传统方法复制
+    const textArea = document.createElement('textarea');
+    textArea.value = content;
+    textArea.style.position = 'fixed';
+    textArea.style.opacity = '0';
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      message.success('内容已复制到剪贴板');
+    } catch (err) {
+      message.error('复制失败，请手动复制');
+    }
+    document.body.removeChild(textArea);
+  }
+};
 
 // 工具面板相关（改为每条消息内部控制 showToolPanel 与 toolEvents）
 
@@ -361,6 +424,12 @@ const handleSendMessage = async () => {
 
 // 组件挂载时初始化设置和加载数据库配置
 onMounted(async () => {
+  // 检查登录状态
+  if (!userStore.isLogin()) {
+    router.push('/login');
+    return;
+  }
+  
   // 初始化设置
   settingsStore.initSettings();
   
@@ -409,6 +478,12 @@ onMounted(async () => {
     margin: 0;
     font-size: 18px;
     font-weight: 600;
+  }
+
+  .username {
+    font-size: 14px;
+    color: var(--n-text-color-2);
+    margin-left: 12px;
   }
 }
 
@@ -478,6 +553,20 @@ onMounted(async () => {
 
 .message-time {
   opacity: 0.7;
+}
+
+.message-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.copy-btn {
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: scale(1.05);
+  }
 }
 
 .message-text {
@@ -959,6 +1048,16 @@ onMounted(async () => {
 
   &:hover {
     transform: scale(1.1);
+  }
+}
+
+.logout-btn {
+  transition: all 0.3s ease;
+  margin-left: 8px;
+
+  &:hover {
+    transform: scale(1.1);
+    color: var(--n-error-color);
   }
 }
 </style>
