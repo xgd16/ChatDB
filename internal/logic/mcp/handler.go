@@ -25,13 +25,81 @@ func init() {
 func (s *sMcpHandler) GetList() []model.McpReg {
 	return []model.McpReg{
 		{
+			Name:        "RunSafeShellCommand",
+			Description: "Execute a terminal command safely with blacklist, operator bans and timeout; supports limited pipes (|)",
+			ToolOptions: []mcp.ToolOption{
+				mcp.WithString("command",
+					mcp.Required(),
+					mcp.Description("The terminal command to execute (supports up to 3 pipes, no redirects/logic ops)"),
+				),
+				mcp.WithString("timeoutSeconds",
+					mcp.Description("Timeout seconds (default 10, max 60)"),
+				),
+				mcp.WithString("cwd",
+					mcp.Description("Optional working directory"),
+				),
+			},
+			Fn: service.McpTool().RunSafeShellCommand,
+		},
+		{
+			Name:        "Md5Encode",
+			Description: "Calculate MD5 (hex lower-case) for a given text",
+			ToolOptions: []mcp.ToolOption{
+				mcp.WithString("text",
+					mcp.Required(),
+					mcp.Description("The text to hash"),
+				),
+			},
+			Fn: service.McpTool().Md5Encode,
+		},
+		{
+			Name:        "Base64Encode",
+			Description: "Encode text to Base64",
+			ToolOptions: []mcp.ToolOption{
+				mcp.WithString("text",
+					mcp.Required(),
+					mcp.Description("Plain text to encode"),
+				),
+			},
+			Fn: service.McpTool().Base64Encode,
+		},
+		{
+			Name:        "Base64Decode",
+			Description: "Decode Base64 string to text",
+			ToolOptions: []mcp.ToolOption{
+				mcp.WithString("data",
+					mcp.Required(),
+					mcp.Description("Base64-encoded data"),
+				),
+			},
+			Fn: service.McpTool().Base64Decode,
+		},
+		{
+			Name:        "JwtParse",
+			Description: "Parse a JWT without verifying signature; returns header and payload",
+			ToolOptions: []mcp.ToolOption{
+				mcp.WithString("token",
+					mcp.Required(),
+					mcp.Description("The JWT token"),
+				),
+			},
+			Fn: service.McpTool().JwtParse,
+		},
+		{
+			Name:        "JsonEncode",
+			Description: "Validate and compact a JSON string",
+			ToolOptions: []mcp.ToolOption{
+				mcp.WithString("raw",
+					mcp.Required(),
+					mcp.Description("Raw JSON string to validate and compact"),
+				),
+			},
+			Fn: service.McpTool().JsonEncode,
+		},
+		{
 			Name:        "SQL_Actuator",
 			Description: "Convert the user's requirements into SQL statements, execute the SQL statements, and return the execution results",
 			ToolOptions: []mcp.ToolOption{
-				mcp.WithString("databaseId",
-					mcp.Required(),
-					mcp.Description("The ID of the database to operate on (databaseId)"),
-				),
 				mcp.WithString("sql",
 					mcp.Required(),
 					mcp.Description("The SQL statement to be executed"),
@@ -60,6 +128,45 @@ func (s *sMcpHandler) GetList() []model.McpReg {
 				),
 			},
 			Fn: service.McpTool().TimestampToDateTime,
+		},
+		{
+			Name:        "GetCalendarDays",
+			Description: "Get all days of a specified year and month",
+			ToolOptions: []mcp.ToolOption{
+				mcp.WithString("year",
+					mcp.Required(),
+					mcp.Description("The year (e.g. 2024)"),
+				),
+				mcp.WithString("month",
+					mcp.Required(),
+					mcp.Description("The month (1-12)"),
+				),
+			},
+			Fn: service.McpTool().GetCalendarDays,
+		},
+		{
+			Name:        "GetDatabaseInfo",
+			Description: "Get database information including type, name, and connection details",
+			ToolOptions: []mcp.ToolOption{
+				// mcp.WithString("dbname",
+				// 	mcp.Description("The database name to query (optional, uses default if not provided)"),
+				// ),
+			},
+			Fn: service.McpTool().GetDatabaseInfo,
+		},
+		{
+			Name:        "ExecRedisCommand",
+			Description: "Execute a Redis command and return the result",
+			ToolOptions: []mcp.ToolOption{
+				mcp.WithString("command",
+					mcp.Required(),
+					mcp.Description("The Redis command to execute (e.g., 'GET', 'SET', 'HGETALL', 'KEYS')"),
+				),
+				mcp.WithString("args",
+					mcp.Description("Command arguments as JSON array (e.g., '[\"key\"]', '[\"key\", \"value\"]')"),
+				),
+			},
+			Fn: service.McpTool().ExecRedisCommand,
 		},
 	}
 }

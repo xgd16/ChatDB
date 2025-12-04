@@ -4,6 +4,7 @@ type ConfigData struct {
 	Server   *ServerConfig `json:"server"`
 	AiConfig *AiConfig     `json:"ai"`
 	Jwt      []*JwtOption  `json:"jwt" dc:"JWT配置"`
+	DbConfig *DbConfig     `json:"db" dc:"数据库配置"`
 }
 
 // ServerConfig 服务配置
@@ -36,4 +37,9 @@ type DeepSeekConfig struct {
 
 type McpConfig struct {
 	Address string `json:"address"`
+}
+
+// DbConfig 数据库配置
+type DbConfig struct {
+	Readonly bool `json:"readonly" dc:"是否启用只读模式，启用后只允许执行查询操作（SELECT语句）"`
 }
