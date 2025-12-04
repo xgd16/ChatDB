@@ -15,3 +15,14 @@ export interface LoginRes {
     lastLoginTme: number;
     createTime:   number;
 }
+
+export interface RegisterReq {
+    key: string;
+    username: string;
+    password: string;
+}
+
+export interface RegisterRes {
+    token: string;
+    expire: number;
+}

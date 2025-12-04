@@ -1,35 +1,51 @@
 <template>
   <div class="tool-usage-panel">
     <div class="panel-header">
-      <div class="left">
+      <div class="header-title">
         <i class="ri-cpu-line"></i>
-        <span class="title">工具流程</span>
-        <n-tag v-if="events && events.length" size="small" type="primary">{{ events.length }} 步</n-tag>
+        <span>工具执行流程</span>
       </div>
-      <div class="right">
-        <n-button quaternary size="tiny" @click="$emit('close')">
-          <template #icon>
-            <i class="ri-eye-off-line"></i>
-          </template>
-          隐藏
-        </n-button>
+      <div class="header-actions">
+        <el-tag v-if="events && events.length" size="small" round effect="plain">{{ events.length }} 步</el-tag>
+        <el-button link size="small" @click="$emit('close')">
+          <i class="ri-close-line"></i>
+        </el-button>
       </div>
     </div>
-    <div class="panel-body" :class="{ empty: !events || events.length === 0 }">
-      <div v-if="!events || events.length === 0" class="empty">
-        <i class="ri-information-line"></i>
-        <span>暂无工具执行记录</span>
+
+    <div class="panel-content" ref="contentRef">
+      <div v-if="!events || events.length === 0" class="empty-state">
+        <div class="empty-icon">
+          <i class="ri-flow-chart"></i>
+        </div>
+        <p>暂无工具调用</p>
+        <span class="sub-text">AI 调用工具查询数据时会显示在这里</span>
       </div>
-      <div v-else class="timeline">
+
+      <div v-else class="timeline-container">
         <div v-for="(item, idx) in events" :key="idx" class="timeline-item">
-          <div class="bullet" :class="{ active: loading && idx === events.length - 1 }"></div>
-          <div class="content">
-            <div class="row">
-              <n-tag size="small" type="success">Step {{ idx + 1 }}</n-tag>
-              <span class="name">{{ item.name || '未知工具' }}</span>
-              <n-spin v-if="loading && idx === events.length - 1" size="small" style="margin-left: 6px" />
+          <div class="timeline-left">
+            <div class="line-top" v-if="idx > 0"></div>
+            <div class="dot" :class="{ active: loading && idx === events.length - 1, finished: idx < events.length - 1 }">
+              <i v-if="idx < events.length - 1" class="ri-check-fill"></i>
+              <span v-else>{{ idx + 1 }}</span>
             </div>
-            <div v-if="item.output" class="output markdown" v-html="renderMarkdown(normalizeOutput(item.output))"></div>
+            <div class="line-bottom" v-if="idx < events.length - 1"></div>
+          </div>
+          
+          <div class="timeline-content">
+            <div class="step-header">
+              <span class="tool-name">{{ item.name || '未知工具' }}</span>
+              <span class="time" v-if="item.timestamp">{{ formatTime(item.timestamp) }}</span>
+              <el-icon v-if="loading && idx === events.length - 1" class="is-loading">
+                <Loading />
+              </el-icon>
+            </div>
+            
+            <div v-if="item.output" class="step-output">
+              <div class="output-label">输出结果:</div>
+              <div class="code-block markdown-body" v-html="renderMarkdown(normalizeOutput(item.output))"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -38,9 +54,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ref, watch, nextTick } from 'vue';
 import { marked } from 'marked';
-import { NButton, NTag, NSpin } from 'naive-ui';
+import { ElButton, ElTag, ElIcon } from 'element-plus';
+import { Loading } from '@element-plus/icons-vue';
 
 interface ToolEventItem {
   name: string;
@@ -50,6 +67,20 @@ interface ToolEventItem {
 
 const props = defineProps<{ events: ToolEventItem[]; loading: boolean }>();
 defineEmits<{ (e: 'close'): void }>();
+
+const contentRef = ref<HTMLElement>();
+
+watch(() => props.events.length, () => {
+  nextTick(() => {
+    if (contentRef.value) {
+      contentRef.value.scrollTop = contentRef.value.scrollHeight;
+    }
+  });
+});
+
+const formatTime = (timestamp: number) => {
+  return new Date(timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+};
 
 const normalizeOutput = (output: any) => {
   try {
@@ -75,88 +106,170 @@ const renderMarkdown = (content: string) => {
 
 <style scoped lang="scss">
 .tool-usage-panel {
-  border: 1px solid var(--n-border-color);
-  border-radius: 12px;
-  background: var(--n-card-color);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--el-bg-color);
 }
+
 .panel-header {
+  height: 56px;
+  padding: 0 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--n-border-color);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  flex-shrink: 0;
 }
-.panel-header .left {
+
+.header-title {
   display: flex;
   align-items: center;
   gap: 8px;
   font-weight: 600;
+  font-size: 15px;
+  color: var(--el-text-color-primary);
 }
-.panel-body {
-  max-height: 220px;
-  overflow: auto;
-  padding: 10px 12px;
-}
-.panel-body.empty {
-  color: var(--n-text-color-3);
-}
-.empty {
+
+.header-actions {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.timeline {
+
+.panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  position: relative;
+}
+
+.empty-state {
+  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  color: var(--el-text-color-secondary);
+  opacity: 0.7;
 }
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  color: var(--el-border-color-darker);
+}
+
+.sub-text {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* Timeline Styles */
+.timeline-container {
+  display: flex;
+  flex-direction: column;
+}
+
 .timeline-item {
   display: flex;
-  gap: 10px;
+  gap: 12px;
+  min-height: 60px;
 }
-.bullet {
-  width: 10px;
-  height: 10px;
+
+.timeline-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 24px;
+  flex-shrink: 0;
+}
+
+.dot {
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: var(--n-border-color);
-  margin-top: 6px;
+  background: var(--el-fill-color);
+  border: 2px solid var(--el-border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--el-text-color-secondary);
+  z-index: 1;
+  transition: all 0.3s;
 }
-.bullet.active {
-  background: var(--n-primary-color);
+
+.dot.active {
+  border-color: var(--el-color-primary);
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
 }
-.content .row {
+
+.dot.finished {
+  background: var(--el-color-success);
+  border-color: var(--el-color-success);
+  color: white;
+}
+
+.line-top, .line-bottom {
+  width: 2px;
+  background: var(--el-border-color-lighter);
+  flex: 1;
+}
+
+.timeline-content {
+  flex: 1;
+  padding-bottom: 24px;
+  min-width: 0; /* prevent overflow */
+}
+
+.step-header {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-bottom: 8px;
+  height: 24px; /* Align with dot */
 }
-.content .name {
-  font-weight: 500;
+
+.tool-name {
+  font-weight: 600;
+  font-size: 14px;
 }
-.output {
-  margin: 6px 0 0 0;
-  border-left: 3px solid var(--n-border-color);
-  padding-left: 10px;
-  font-size: 13px;
-  line-height: 1.55;
+
+.time {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  margin-left: auto;
 }
-.output.markdown :deep(code) {
-  background: var(--n-code-color);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 0.9em;
-}
-.output.markdown :deep(pre) {
-  background: var(--n-code-color);
+
+.step-output {
+  background: var(--el-fill-color-light);
+  border-radius: 8px;
   padding: 10px;
-  border-radius: 6px;
-  overflow: auto;
+  font-size: 13px;
 }
-.output.markdown :deep(ul),
-.output.markdown :deep(ol) {
-  padding-left: 18px;
+
+.output-label {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  margin-bottom: 4px;
+}
+
+.code-block {
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+.code-block :deep(pre) {
+  margin: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.code-block :deep(code) {
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 12px;
 }
 </style>
-
-

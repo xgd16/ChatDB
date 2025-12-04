@@ -1,1063 +1,814 @@
 <template>
-  <div class="chat-container">
-    <BackgroundOrbs :orb-count="10" />
-    <!-- 顶部工具栏 -->
-    <div class="chat-header">
+  <div class="app-container">
+    <!-- 顶部导航栏 -->
+    <header class="app-header">
       <div class="header-left">
-        <h2>问库</h2>
-        <span class="status" :class="{ online: isConnected }">
-          {{ isConnected ? '已连接' : '未连接' }}
-        </span>
-        <span class="username" v-if="userStore.username">
-          欢迎，{{ userStore.username }}
-        </span>
-      </div>
-      <div class="header-right">
-        <n-button
-          quaternary
-          circle
-          @click="showSettings = true"
-          class="settings-btn"
-        >
-          <template #icon>
-            <i class="ri-settings-3-line"></i>
-          </template>
-        </n-button>
-        <n-button
-          quaternary
-          circle
-          @click="handleLogout"
-          class="logout-btn"
-        >
-          <template #icon>
-            <i class="ri-logout-box-r-line"></i>
-          </template>
-        </n-button>
-      </div>
-    </div>
-
-    <!-- 聊天消息区域 -->
-    <div class="chat-messages" ref="messagesContainer">
-      <div
-        v-for="(message, index) in messages"
-        :key="index"
-        class="message"
-        :class="message.role"
-      >
-        <div class="message-avatar">
-          <UserAvatar v-if="message.role === 'user'" :size="40" />
-          <AIAvatar v-else :size="40" />
+        <div class="logo">
+          <div class="logo-icon">
+            <i class="ri-database-2-fill"></i>
+          </div>
+          <div class="logo-text">
+            <h1 class="app-title">问库</h1>
+            <span class="app-desc">AI SQL Assistant</span>
+          </div>
         </div>
-        <div class="message-content">
-          <div class="message-header">
-            <span class="message-author">
-              {{ message.role === 'user' ? '我' : 'AI 助手' }}
-            </span>
-            <span class="message-time">{{ formatTime(message.timestamp) }}</span>
-            <div class="message-actions">
-              <n-button
-                v-if="message.role === 'assistant' && message.content"
-                size="tiny"
-                quaternary
-                @click="copyMessageContent(message.content)"
-                class="copy-btn"
-              >
-                <template #icon>
-                  <i class="ri-file-copy-line"></i>
-                </template>
-                复制
-              </n-button>
-              <n-button
-                v-if="message.role === 'assistant' && (message as any).toolEvents && (message as any).toolEvents.length"
-                size="tiny"
-                quaternary
-                @click="(message as any).showToolPanel = !(message as any).showToolPanel"
-              >
-                <template #icon>
-                  <i :class="(message as any).showToolPanel === false ? 'ri-eye-line' : 'ri-eye-off-line'"></i>
-                </template>
-                {{ (message as any).showToolPanel === false ? '显示流程' : '隐藏流程' }}
-              </n-button>
+      </div>
+      
+      <div class="header-right">
+        <el-button circle text @click="toggleTheme">
+          <i :class="isDark ? 'ri-sun-line' : 'ri-moon-line'"></i>
+        </el-button>
+        <el-button circle text @click="showSettings = true">
+          <i class="ri-settings-3-line"></i>
+        </el-button>
+        <el-divider direction="vertical" />
+        <el-button text bg class="logout-btn" @click="handleLogout">
+          <i class="ri-logout-box-r-line"></i>
+          <span>退出</span>
+        </el-button>
+      </div>
+    </header>
+
+    <!-- 主体内容区 -->
+    <main class="app-main">
+      <!-- 聊天区域 -->
+      <div class="chat-section" :class="{ 'has-sidebar': showToolPanel }">
+        <div class="chat-messages" ref="chatContainerRef">
+          <div v-if="messages.length === 0" class="welcome-screen">
+            <div class="welcome-content">
+              <div class="welcome-icon">
+                <i class="ri-robot-2-line"></i>
+              </div>
+              <h2>有什么可以帮您的吗？</h2>
+              <p>我可以帮您查询数据库、分析数据结构或生成 SQL 语句。</p>
+              <div class="suggestion-chips">
+                <div class="chip" @click="quickAsk('查询最近注册的用户')">查询最近注册的用户</div>
+                <div class="chip" @click="quickAsk('统计各地区订单数量')">统计各地区订单数量</div>
+                <div class="chip" @click="quickAsk('分析商品销售趋势')">分析商品销售趋势</div>
+              </div>
             </div>
           </div>
-          <ToolUsagePanel
-            v-if="message.role === 'assistant' && (message as any).toolEvents && (message as any).toolEvents.length && (message as any).showToolPanel !== false"
-            :events="(message as any).toolEvents"
-            :loading="isLoading && index === messages.length - 1"
-            @close="(message as any).showToolPanel = false"
-            style="margin: 6px 0 10px 0;"
-          />
-          <div class="message-text">
-            <template v-if="message.role === 'assistant'">
-              <!-- 思考中：假进度条（内嵌在消息气泡内） -->
-              <div v-if="index === messages.length - 1 && isLoading && (!message.content || message.content.length === 0) && (!(message as any).toolEvents || (message as any).toolEvents.length === 0)" class="thinking-inline">
-                <div class="thinking-bar">
-                  <div class="thinking-bar-inner" :style="{ width: Math.round(thinkingProgress) + '%' }"></div>
-                  <div class="thinking-bar-percent">{{ Math.round(thinkingProgress) }}%</div>
+
+          <div v-else class="message-list">
+            <template v-for="(message, index) in messages" :key="index">
+              <!-- 用户消息始终显示；助手消息只要存在就显示，内容由打字机逐步填充 -->
+              <div
+                v-if="message.role === 'user' || (message.role === 'assistant' && (message.content || isLoading || index === messages.length - 1))"
+                class="message-row"
+                :class="message.role"
+              >
+                <div class="avatar">
+                  <UserAvatar v-if="message.role === 'user'" />
+                  <AIAvatar v-else />
                 </div>
-                <span class="thinking-text">正在思考...</span>
+                <div class="message-bubble">
+                  <!-- 当内容为空时显示一个空格占位，或者直接显示空div，避免高度坍塌 -->
+                  <div class="bubble-content markdown-body" v-html="renderMarkdown(message.content || ' ')"></div>
+                  <div class="message-meta" v-if="message.content || message.role === 'user'">
+                    <span class="time">{{ formatTime(message.timestamp) }}</span>
+                  </div>
+                </div>
               </div>
-              <div v-else class="markdown-content" v-html="renderMarkdown(message.content)"></div>
             </template>
-            <div v-else class="user-message">{{ message.content }}</div>
+
+            <!-- Loading State -->
+            <div v-if="isLoading" class="message-row assistant loading">
+              <div class="avatar">
+                <AIAvatar />
+              </div>
+              <div class="message-bubble">
+                <div class="typing-indicator">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                <span class="loading-text">AI 正在思考...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 输入区域 -->
+        <div class="input-section">
+          <div class="input-wrapper">
+            <el-input
+              v-model="inputMessage"
+              type="textarea"
+              :autosize="{ minRows: 1, maxRows: 8 }"
+              placeholder="输入您的问题..."
+              class="chat-input"
+              @keydown.enter.exact.prevent="handleSendMessage"
+            />
+            <div class="input-actions">
+              <el-tooltip content="工具面板" placement="top">
+                <el-button circle text @click="showToolPanel = !showToolPanel" :type="showToolPanel ? 'primary' : ''">
+                  <i class="ri-tools-line"></i>
+                </el-button>
+              </el-tooltip>
+              <el-button type="primary" circle :disabled="!inputMessage.trim() || isLoading" @click="handleSendMessage">
+                <i class="ri-send-plane-fill"></i>
+              </el-button>
+            </div>
+          </div>
+          <div class="input-footer">
+            <span>按 Enter 发送，Shift + Enter 换行</span>
           </div>
         </div>
       </div>
-      
-      
-    </div>
 
-    <!-- 悬浮输入区域 -->
-    <div class="floating-input-container">
-      <div class="glassmorphism-input">
-        <div class="input-wrapper" id="message-enter">
-          <n-input
-            v-model:value="inputMessage"
-            type="textarea"
-            :autosize="{ minRows: 1, maxRows: 8 }"
-            placeholder="输入你的问题... (Shift+Enter 换行，Enter 发送)"
-            @keydown="handleKeyDown"
-            :disabled="isLoading"
-            class="glass-input"
-            :show-count="false"
-            clearable
+      <!-- 右侧工具面板 -->
+      <transition name="slide-right">
+        <aside v-if="showToolPanel" class="tool-sidebar">
+          <ToolUsagePanel
+            :events="toolEvents"
+            :loading="isLoading"
+            @close="showToolPanel = false"
           />
-          <n-button
-            type="primary"
-            :disabled="!inputMessage.trim() || isLoading"
-            @click="handleSendMessage"
-            class="glass-send-button"
-            size="large"
-          >
-            <template #icon>
-              <i class="ri-send-plane-fill"></i>
-            </template>
-            发送
-          </n-button>
-        </div>
-      </div>
-    </div>
-  </div>
+        </aside>
+      </transition>
+    </main>
 
-  <!-- 设置抽屉 -->
-  <ChatSettings v-model:show="showSettings" />
+    <!-- 设置抽屉 -->
+    <ChatSettings v-model:show="showSettings" />
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, nextTick, watch } from 'vue';
-import { 
-  NAvatar, 
-  NInput, 
-  NButton, 
-  NSpin,
-  useMessage
-} from 'naive-ui';
+import { ref, onMounted, nextTick, watch, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { ElMessage, ElButton, ElInput, ElDivider, ElTooltip } from 'element-plus';
+import { marked } from 'marked';
+import ChatSettings from '@/components/ChatSettings.vue';
+import ToolUsagePanel from '@/components/ToolUsagePanel.vue';
 import UserAvatar from '@/components/icons/UserAvatar.vue';
 import AIAvatar from '@/components/icons/AIAvatar.vue';
-import ChatSettings from '@/components/ChatSettings.vue';
-import BackgroundOrbs from '@/components/BackgroundOrbs.vue';
-import ToolUsagePanel from '@/components/ToolUsagePanel.vue';
-import { marked } from 'marked';
-import { chatApi, getDatabaseConfigList } from '@/api/ai';
-import type { ChatMessage } from '@/types/ai';
+import { chatApi } from '@/api/ai';
 import { useSettingsStore } from '@/stores/settings';
 import { useUserStore } from '@/stores/counter';
-import { useRouter } from 'vue-router';
+import { useThemeStore } from '@/stores/theme';
+import type { ChatMessage, ChatStreamEvent } from '@/types/ai';
 
-// 消息提示
-const message = useMessage();
-
-// 设置相关
+const router = useRouter();
 const settingsStore = useSettingsStore();
 const userStore = useUserStore();
-const router = useRouter();
+const themeStore = useThemeStore();
 
-// 响应式数据
-type ToolEvent = { name: string; output?: any; timestamp: number };
-type LocalChatMessage = ChatMessage & { toolEvents?: ToolEvent[]; showToolPanel?: boolean };
-const messages = ref<LocalChatMessage[]>([]);
-
+const chatContainerRef = ref<HTMLElement>();
 const inputMessage = ref('');
+const messages = ref<ChatMessage[]>([]);
 const isLoading = ref(false);
-const isConnected = ref(true);
-const messagesContainer = ref<HTMLElement>();
-
-// 思考中进度条（假进度）
-const thinkingProgress = ref(0);
-let thinkingTimer: number | undefined;
-let hasReceivedFirstChunk = false;
-
-const startThinkingProgress = () => {
-  hasReceivedFirstChunk = false;
-  thinkingProgress.value = 5;
-  if (thinkingTimer) window.clearInterval(thinkingTimer);
-  thinkingTimer = window.setInterval(() => {
-    // 递增到 92% 封顶，避免太快结束
-    if (thinkingProgress.value < 92) {
-      thinkingProgress.value = Math.min(92, thinkingProgress.value + Math.random() * 4 + 2);
-    }
-  }, 120);
-};
-
-const finishThinkingProgress = () => {
-  if (thinkingTimer) {
-    window.clearInterval(thinkingTimer);
-    thinkingTimer = undefined;
-  }
-  thinkingProgress.value = 100;
-};
-
-// 设置抽屉
 const showSettings = ref(false);
+const showToolPanel = ref(true);
+const toolEvents = ref<Array<{ name: string; output?: any; timestamp?: number }>>([]);
 
-// 退出登录
-const handleLogout = () => {
-  userStore.clearUserInfo();
-  // 清除本地存储的token
-  localStorage.removeItem('userInfo');
-  message.success('已退出登录');
-  router.push('/login');
+// 打字机效果队列
+const typingQueue = ref('');
+let typingTimer: number | null = null;
+
+const isDark = computed(() => themeStore.isDark);
+
+const toggleTheme = () => {
+  themeStore.toggleTheme();
 };
 
-// 复制消息内容
-const copyMessageContent = async (content: string) => {
-  try {
-    // 如果是markdown内容，直接复制原始文本
-    await navigator.clipboard.writeText(content);
-    message.success('内容已复制到剪贴板');
-  } catch (error) {
-    // 降级方案：使用传统方法复制
-    const textArea = document.createElement('textarea');
-    textArea.value = content;
-    textArea.style.position = 'fixed';
-    textArea.style.opacity = '0';
-    document.body.appendChild(textArea);
-    textArea.select();
-    try {
-      document.execCommand('copy');
-      message.success('内容已复制到剪贴板');
-    } catch (err) {
-      message.error('复制失败，请手动复制');
-    }
-    document.body.removeChild(textArea);
+const quickAsk = (text: string) => {
+  inputMessage.value = text;
+  handleSendMessage();
+};
+
+// 初始化设置
+onMounted(() => {
+  settingsStore.initSettings();
+  themeStore.initTheme();
+  loadDatabaseConfigs();
+  loadAIModels();
+});
+
+// 监听消息变化，自动滚动到底部
+watch(messages, () => {
+  nextTick(() => {
+    scrollToBottom();
+  });
+}, { deep: true });
+
+// 监听设置面板关闭，刷新数据库配置列表
+watch(showSettings, (newVal, oldVal) => {
+  // 当设置面板从打开变为关闭时，刷新数据库配置列表
+  if (oldVal === true && newVal === false) {
+    loadDatabaseConfigs();
+  }
+});
+
+// 滚动到底部
+const scrollToBottom = () => {
+  if (chatContainerRef.value) {
+    chatContainerRef.value.scrollTo({
+      top: chatContainerRef.value.scrollHeight,
+      behavior: 'smooth'
+    });
   }
 };
-
-// 工具面板相关（改为每条消息内部控制 showToolPanel 与 toolEvents）
-
-// 配置 marked 选项
-marked.setOptions({
-  breaks: true,
-  gfm: true
-});
 
 // 渲染 Markdown
 const renderMarkdown = (content: string) => {
   try {
-    return marked(content);
-  } catch (error) {
-    console.error('Markdown 渲染错误:', error);
-    return content;
+    return marked(content || '');
+  } catch {
+    return content || '';
   }
 };
 
 // 格式化时间
 const formatTime = (timestamp: number) => {
   const date = new Date(timestamp);
-  return date.toLocaleTimeString('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 };
 
-// 滚动到底部
-const scrollToBottom = async () => {
-  await nextTick();
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
-  }
-};
+// 启动/维护打字机效果，将新内容缓存在队列里，按字符逐个输出
+const startTyping = (target: ChatMessage, text: string) => {
+  if (!text) return;
+  typingQueue.value += text;
 
-// 键盘事件处理
-const handleKeyDown = (event: KeyboardEvent) => {
-  if (event.key === 'Enter') {
-    if (event.shiftKey) {
-      // Shift+Enter: 换行
+  if (typingTimer !== null) return;
+
+  typingTimer = window.setInterval(() => {
+    if (!typingQueue.value.length) {
+      if (typingTimer !== null) {
+        window.clearInterval(typingTimer);
+        typingTimer = null;
+      }
       return;
-    } else {
-      // Enter: 发送消息
-      event.preventDefault();
-      handleSendMessage();
     }
-  }
+
+    // 取出一个字符追加到当前助手消息
+    const ch = typingQueue.value[0];
+    typingQueue.value = typingQueue.value.slice(1);
+    target.content += ch;
+  }, 16); // 约 60fps，可根据喜好调节速度
 };
 
 // 发送消息
 const handleSendMessage = async () => {
   if (!inputMessage.value.trim() || isLoading.value) return;
 
-  const userMessage = inputMessage.value.trim();
-  inputMessage.value = '';
-  
-  // 添加用户消息
-  messages.value.push({
+  const userMessage: ChatMessage = {
     role: 'user',
-    content: userMessage,
+    content: inputMessage.value.trim(),
     timestamp: Date.now()
-  });
+  };
 
-  // 预先添加占位的助手消息，用于显示“思考中”进度条
-  messages.value.push({
-    role: 'assistant',
-    content: '',
-    timestamp: Date.now(),
-    toolEvents: [],
-    showToolPanel: false
-  } as LocalChatMessage);
-
-  await scrollToBottom();
+  messages.value.push(userMessage);
+  const currentInput = inputMessage.value.trim();
+  inputMessage.value = '';
   isLoading.value = true;
-  startThinkingProgress();
+  toolEvents.value = [];
+
+  // 如果工具面板被隐藏且有新消息，是否自动打开？暂时不自动打开，由用户控制
 
   try {
-    // 调用 AI 聊天 API
+    // 检查必要的配置：当前选择的数据库是否存在于列表中
+    const hasValidDatabase =
+      settingsStore.databaseOptions.length > 0 &&
+      settingsStore.databaseOptions.some(
+        (opt) => opt.value === settingsStore.settings.databaseId
+      );
+
+    if (!hasValidDatabase) {
+      ElMessage.warning('请先选择数据库配置');
+      isLoading.value = false;
+      return;
+    }
+
     const response = await chatApi({
       ai: settingsStore.settings.ai,
       model: settingsStore.settings.model,
-      message: userMessage,
-      databaseId: settingsStore.settings.databaseId,
-      prompt: ''
+      message: currentInput,
+      databaseId: settingsStore.settings.databaseId
     });
 
     if (!response.ok) {
-      throw new Error('网络请求失败');
+      const errorText = await response.text().catch(() => '请求失败');
+      throw new Error(errorText || '请求失败');
     }
 
     const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error('无法读取响应流');
-    }
-
-    let aiResponse = '';
     const decoder = new TextDecoder();
+    let assistantMessage: ChatMessage = {
+      role: 'assistant',
+      content: '',
+      timestamp: Date.now()
+    };
+    messages.value.push(assistantMessage);
 
-    while (true) {
+    let buffer = '';
+    let traceId = '';
+
+    while (reader) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      const chunk = decoder.decode(value);
-      const lines = chunk.split('\n');
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
 
       for (const line of lines) {
+        if (line.trim() === '') continue;
+        
         if (line.startsWith('data: ')) {
+          const dataStr = line.slice(6);
+          if (dataStr === '[DONE]') continue;
+
           try {
-            const data = JSON.parse(line.slice(6));
-            if (data.event === 'tool_call') {
-              // 确保存在当前的助手消息
-              let lastMessage = messages.value[messages.value.length - 1];
-              if (!lastMessage || lastMessage.role !== 'assistant') {
-                lastMessage = {
-                  role: 'assistant',
-                  content: '',
-                  timestamp: Date.now(),
-                  toolEvents: [],
-                  showToolPanel: true
-                } as LocalChatMessage;
-                messages.value.push(lastMessage);
-              }
-              if (!lastMessage.toolEvents) lastMessage.toolEvents = [];
-              lastMessage.showToolPanel = true;
-              lastMessage.toolEvents.push({
-                name: data?.data?.name ?? '未知工具',
-                output: data?.data?.output,
-                timestamp: Date.now()
-              });
-              await scrollToBottom();
-              continue;
+            const event: ChatStreamEvent = JSON.parse(dataStr);
+            
+            if (event.traceId) {
+              traceId = event.traceId;
             }
-            if (data.event === 'message' && data.content) {
-              if (!hasReceivedFirstChunk) {
-                finishThinkingProgress();
-                hasReceivedFirstChunk = true;
-              }
-              aiResponse += data.content;
-              // 更新最后一条消息或创建新消息
-              const lastMessage = messages.value[messages.value.length - 1];
-              if (lastMessage && lastMessage.role === 'assistant') {
-                lastMessage.content = aiResponse;
-              } else {
-                messages.value.push({
-                  role: 'assistant',
-                  content: aiResponse,
-                  timestamp: Date.now(),
-                  toolEvents: [],
-                  showToolPanel: true
+
+            if (event.event === 'message' && event.content) {
+              // 将 SSE 新内容交给打字机队列，逐字符输出
+              startTyping(assistantMessage, event.content);
+            } else if (event.event === 'tool_call') {
+              // 处理工具调用事件
+              if (event.data) {
+                toolEvents.value.push({
+                  name: event.data.name || '未知工具',
+                  output: event.data.output,
+                  timestamp: event.createTime || Date.now()
                 });
               }
-              await scrollToBottom();
-            } else if (data.event === 'end') {
-              break;
             }
           } catch (e) {
-            // 忽略解析错误
+            console.error('解析事件失败:', e);
           }
         }
       }
     }
 
-  } catch (error) {
+    scrollToBottom();
+  } catch (error: any) {
     console.error('发送消息失败:', error);
-    message.error('发送消息失败，请重试');
-    
-    // 添加错误消息
-    messages.value.push({
-      role: 'assistant',
-      content: '抱歉，我遇到了一些问题。请稍后重试。',
-      timestamp: Date.now()
-    });
+    ElMessage.error(error.message || '发送消息失败，请重试');
+    messages.value.pop(); // 移除用户消息
   } finally {
+    // 结束时把还在打字队列里的内容一次性刷完
+    if (typingTimer !== null) {
+      window.clearInterval(typingTimer);
+      typingTimer = null;
+    }
+    if (typingQueue.value) {
+      const lastMsg = messages.value[messages.value.length - 1];
+      if (lastMsg && lastMsg.role === 'assistant') {
+        lastMsg.content += typingQueue.value;
+      }
+      typingQueue.value = '';
+    }
     isLoading.value = false;
-    if (thinkingTimer) window.clearInterval(thinkingTimer);
-    await scrollToBottom();
   }
 };
 
-// 组件挂载时初始化设置和加载数据库配置
-onMounted(async () => {
-  // 检查登录状态
-  if (!userStore.isLogin()) {
-    router.push('/login');
-    return;
-  }
-  
-  // 初始化设置
-  settingsStore.initSettings();
-  
+// 加载数据库配置列表
+const loadDatabaseConfigs = async () => {
   try {
-    const response = await getDatabaseConfigList();
-    if (response.code === 0 && response.data.list && response.data.list.length > 0) {
-      const dbOptions = response.data.list.map((db: any, index: number) => ({
-        label: `${db.dbName} (${db.host}:${db.port})`,
-        value: index + 1 // 使用索引+1作为databaseId
-      }));
-      settingsStore.updateDatabaseOptions(dbOptions);
+    const { getDatabaseConfigList } = await import('@/api/ai');
+    const res = await getDatabaseConfigList({ page: 1, size: 100 });
+    if (res && res.code === 0 && res.data) {
+      const list = res.data.list || [];
+      if (list.length > 0) {
+        const options = list.map((db: any) => ({
+          label: `${db.dbName || '未命名'} (${db.dbType || 'unknown'})`,
+          value: db.databaseId || 0
+        }));
+        settingsStore.updateDatabaseOptions(options);
+      } else {
+        // 如果没有数据库配置，清空选项
+        settingsStore.updateDatabaseOptions([]);
+      }
     }
   } catch (error) {
     console.error('加载数据库配置失败:', error);
+    ElMessage.warning('加载数据库配置失败，请稍后重试');
   }
-  
-  // 确保输入框正确初始化
-  await nextTick();
-});
+};
+
+// 加载 AI 模型列表
+const loadAIModels = async () => {
+  try {
+    const { getAiModelList } = await import('@/api/ai');
+    const res = await getAiModelList();
+    if (res && res.code === 0 && res.data) {
+      const list = res.data.list || [];
+      if (list.length > 0) {
+        // 更新 AI 模型选项
+        const models = list.map((item: any) => ({
+          label: item.id || '未知模型',
+          value: item.id || ''
+        }));
+        
+        // 如果当前 AI 提供商是 openai，更新模型列表
+        if (settingsStore.settings.ai === 'openai') {
+          const openaiProvider = settingsStore.aiProviders.find(p => p.value === 'openai');
+          if (openaiProvider && models.length > 0) {
+            openaiProvider.models = models;
+            // 如果当前模型不在新列表中，选择第一个
+            if (!models.find((m: any) => m.value === settingsStore.settings.model)) {
+              settingsStore.updateSettings({ model: models[0].value });
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('加载 AI 模型列表失败:', error);
+    // AI 模型列表加载失败不影响使用，使用默认模型
+  }
+};
+
+// 退出登录
+const handleLogout = () => {
+  userStore.clearUserInfo();
+  router.push('/login');
+};
 </script>
 
-<style lang="scss" scoped>
-.chat-container {
+<style scoped lang="scss">
+.app-container {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--n-color);
-  position: relative; // 让绝对定位的光球容器定位于此
+  background-color: var(--el-bg-color);
+  color: var(--el-text-color-primary);
 }
 
-.chat-header {
+/* Header Styles */
+.app-header {
+  height: 64px;
+  padding: 0 24px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--n-border-color);
-  background: var(--n-card-color);
+  justify-content: space-between;
+  border-bottom: 1px solid var(--el-border-color-light);
+  background-color: var(--el-bg-color-overlay);
+  z-index: 10;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
-
-  h2 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-  }
-
-  .username {
-    font-size: 14px;
-    color: var(--n-text-color-2);
-    margin-left: 12px;
-  }
 }
 
-.status {
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  background: var(--n-error-color);
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
-  &.online {
-    background: var(--n-success-color);
-  }
+.logo-icon {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--el-color-primary), var(--el-color-primary-light-3));
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.app-title {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0;
+  background: linear-gradient(to right, var(--el-text-color-primary), var(--el-text-color-secondary));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.app-desc {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 .header-right {
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Main Content */
+.app-main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Chat Section */
+.chat-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: all 0.3s ease;
+  max-width: 100%;
+}
+
+.chat-section.has-sidebar {
+  margin-right: 0; /* Controlled by flexbox */
 }
 
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
-  padding-bottom: 120px; /* 为悬浮输入框留出空间 */
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  padding: 24px;
+  scroll-behavior: smooth;
 }
 
-.message {
-  display: flex;
-  gap: 12px;
-  max-width: 80%;
-
-  &.user {
-    align-self: flex-end;
-    flex-direction: row-reverse;
-
-    .message-text {
-      background: var(--n-primary-color);
-      border-color: var(--n-primary-color);
-    }
-  }
-
-  &.assistant {
-    align-self: flex-start;
-  }
-}
-
-.message-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.message-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  font-size: 12px;
-  color: var(--n-text-color-3);
-}
-
-.message-author {
-  font-weight: 500;
-}
-
-.message-time {
-  opacity: 0.7;
-}
-
-.message-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.copy-btn {
-  transition: all 0.3s ease;
-  
-  &:hover {
-    transform: scale(1.05);
-  }
-}
-
-.message-text {
-  padding: 12px 16px;
-  border-radius: 12px;
-  background: var(--n-color-modal);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--n-border-color);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  opacity: 0.96;
-  word-wrap: break-word;
-  transition: box-shadow 0.3s ease, transform 0.2s ease, background 0.3s ease;
-}
-
-/* 思考中假进度条（内联） */
-.thinking-inline {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.thinking-bar {
-  position: relative;
-  width: 160px;
-  height: 10px;
-  background: var(--n-border-color);
-  border-radius: 6px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) inset, 0 2px 6px rgba(0, 0, 0, 0.06);
-}
-.thinking-bar-inner {
-  position: absolute;
-  left: 0;
-  top: 0;
+/* Welcome Screen */
+.welcome-screen {
   height: 100%;
-  background: linear-gradient(90deg, var(--n-primary-color), var(--n-primary-color-hover));
-  transition: width 0.2s ease;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.08), 0 0 12px rgba(0, 0, 0, 0.06);
-}
-.thinking-bar-percent {
-  position: absolute;
-  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-  pointer-events: none;
-}
-.thinking-text {
-  display: inline-block;
-  font-size: 12px;
-  color: var(--n-text-color-3);
-}
-/* 不再使用滑动动画，使用基于宽度的百分比 */
-
-.markdown-content {
-  line-height: 1.6;
-
-  :deep(p) {
-    margin: 0 0 12px 0;
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-  }
-
-  :deep(code) {
-    background: var(--n-code-color);
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 0.9em;
-  }
-
-  :deep(pre) {
-    background: var(--n-code-color);
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-    margin: 12px 0;
-
-    code {
-      background: none;
-      padding: 0;
-    }
-  }
-
-  :deep(blockquote) {
-    border-left: 4px solid var(--n-border-color);
-    padding-left: 12px;
-    margin: 12px 0;
-    color: var(--n-text-color-2);
-  }
-
-  :deep(ul), :deep(ol) {
-    margin: 12px 0;
-    padding-left: 20px;
-  }
-
-  :deep(li) {
-    margin: 4px 0;
-  }
-
-  /* 表格样式优化 */
-  :deep(table) {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 16px 0;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 
-      0 4px 20px rgba(0, 0, 0, 0.08),
-      0 2px 8px rgba(0, 0, 0, 0.06),
-      0 0 0 1px rgba(255, 255, 255, 0.1);
-    background: var(--n-card-color);
-    border: 2px solid var(--n-border-color);
-    position: relative;
-    backdrop-filter: blur(10px);
-    transform: translateZ(0);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    isolation: isolate;
-
-    &::before {
-      content: '';
-      position: absolute;
-      top: -2px;
-      left: -2px;
-      right: -2px;
-      bottom: -2px;
-      background: linear-gradient(45deg, 
-        var(--n-primary-color), 
-        var(--n-primary-color-hover), 
-        var(--n-primary-color));
-      border-radius: 14px;
-      z-index: -1;
-      opacity: 0.1;
-      transition: opacity 0.3s ease;
-    }
-
-    &:hover {
-      box-shadow: 
-        0 8px 32px rgba(0, 0, 0, 0.12),
-        0 4px 16px rgba(0, 0, 0, 0.08),
-        0 0 0 1px rgba(255, 255, 255, 0.15);
-      transform: translateY(-2px);
-
-      &::before {
-        opacity: 0.2;
-      }
-    }
-  }
-
-  :deep(thead) {
-    background: linear-gradient(135deg, var(--n-primary-color), var(--n-primary-color-hover));
-    position: relative;
-
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
-      pointer-events: none;
-    }
-  }
-
-  :deep(th) {
-    padding: 12px 16px;
-    text-align: left;
-    font-weight: 600;
-    font-size: 14px;
-    border-bottom: 2px solid var(--n-primary-color);
-    position: relative;
-
-    &:not(:last-child) {
-      border-right: 1px solid rgba(255, 255, 255, 0.2);
-    }
-  }
-
-  :deep(td) {
-    padding: 12px 16px;
-    border-bottom: 2px solid var(--n-border-color);
-    font-size: 14px;
-    line-height: 1.5;
-    vertical-align: top;
-    position: relative;
-
-    &:not(:last-child) {
-      border-right: 2px solid var(--n-border-color);
-    }
-
-    &::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(135deg, 
-        rgba(255, 255, 255, 0.05), 
-        rgba(255, 255, 255, 0.02));
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.2s ease;
-    }
-
-    code {
-      background: var(--n-code-color);
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-      font-size: 0.85em;
-      color: var(--n-text-color);
-    }
-  }
-
-  :deep(tr) {
-    &:last-child td {
-      border-bottom: none;
-    }
-
-    &:nth-child(even) {
-      background: var(--n-color-modal);
-      opacity: 0.9;
-    }
-
-    &:nth-child(odd) {
-      background: var(--n-card-color);
-      opacity: 0.95;
-    }
-
-    &:hover {
-      background: var(--n-color-hover);
-      transition: all 0.2s ease;
-      transform: translateX(4px);
-      box-shadow: 
-        inset 0 0 0 1px var(--n-primary-color),
-        0 2px 8px rgba(0, 0, 0, 0.1);
-      opacity: 1;
-
-      td::after {
-        opacity: 1;
-      }
-    }
-  }
-
-  /* 表格响应式设计 */
-  @media (max-width: 768px) {
-    :deep(table) {
-      font-size: 12px;
-      margin: 12px 0;
-      overflow-x: auto;
-      display: block;
-    }
-    
-    :deep(th),
-    :deep(td) {
-      padding: 8px 10px;
-    }
-  }
+  color: var(--el-text-color-primary);
 }
 
-/* 悬浮输入区域 */
-.floating-input-container {
-  position: fixed;
-  bottom: 30px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 90%;
-  max-width: 800px;
-  z-index: 1000;
-  pointer-events: none;
+.welcome-content {
+  text-align: center;
+  max-width: 600px;
+  padding: 0 20px;
 }
 
-.glassmorphism-input {
-  background: var(--n-card-color);
-  backdrop-filter: blur(10px);
+.welcome-icon {
+  font-size: 64px;
+  color: var(--el-color-primary);
+  margin-bottom: 24px;
+  opacity: 0.8;
+}
+
+.welcome-content h2 {
+  font-size: 24px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.welcome-content p {
+  color: var(--el-text-color-secondary);
+  margin-bottom: 32px;
+  font-size: 16px;
+}
+
+.suggestion-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.chip {
+  padding: 8px 16px;
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+  color: var(--el-text-color-regular);
+}
+
+.chip:hover {
+  background: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary-light-5);
+  color: var(--el-color-primary);
+  transform: translateY(-2px);
+}
+
+/* Message List */
+.message-list {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.message-row {
+  display: flex;
+  gap: 16px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.message-row.user {
+  flex-direction: row-reverse;
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--el-fill-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.message-bubble {
+  max-width: 80%;
+  padding: 12px 16px;
   border-radius: 16px;
-  border: 1px solid var(--n-border-color);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  padding: 16px;
-  pointer-events: auto;
-  transition: all 0.3s ease;
-  opacity: 0.95;
+  background: var(--el-fill-color-light);
+  position: relative;
+}
 
-  &:hover {
-    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
-    transform: translateY(-1px);
-  }
+.message-row.user .message-bubble {
+  background: var(--el-color-primary);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.message-row.assistant .message-bubble {
+  background: var(--el-bg-color-overlay);
+  border: 1px solid var(--el-border-color-lighter);
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.bubble-content {
+  line-height: 1.6;
+  font-size: 15px;
+  word-break: break-word;
+}
+
+/* Markdown Styles Override within bubble */
+.bubble-content :deep(p) {
+  margin-bottom: 8px;
+}
+
+.bubble-content :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.bubble-content :deep(pre) {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  padding: 12px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+.user .bubble-content :deep(pre) {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.message-meta {
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.6;
+  text-align: right;
+}
+
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 4px 0;
+  align-items: center;
+}
+
+.typing-indicator span {
+  width: 6px;
+  height: 6px;
+  background: var(--el-text-color-secondary);
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+.typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+.loading-text {
+  margin-left: 8px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+/* Input Section */
+.input-section {
+  flex-shrink: 0;
+  padding: 24px;
+  background: var(--el-bg-color);
+  border-top: 1px solid var(--el-border-color-lighter);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 5;
 }
 
 .input-wrapper {
+  width: 100%;
+  max-width: 800px;
+  position: relative;
+  background: var(--el-bg-color-overlay);
+  border: 1px solid var(--el-border-color);
+  border-radius: 24px; /* Rounded pill-like or rounded rect */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 8px;
   display: flex;
-  gap: 12px;
-  align-items: flex-end;
-  min-height: 48px;
+  flex-direction: column;
+  transition: all 0.3s;
 }
 
-.glass-input {
-  flex: 1;
-  display: flex;
-  align-items: stretch;
-
-  :deep(.n-input__textarea) {
-    height: 48px;
-  }
-
-  :deep(.n-input-wrapper) {
-    display: flex;
-    align-items: stretch;
-    width: 100%;
-  }
-
-  :deep(.n-input) {
-    background: transparent;
-    border: none;
-    box-shadow: none;
-    width: 100%;
-  }
-
-  :deep(.n-input__textarea-el) {
-    background: var(--n-color-modal);
-    border: none;
-    font-size: 16px;
-    color: var(--n-text-color);
-    resize: none;
-    outline: none;
-    width: 100%;
-    min-height: 48px;
-    max-height: 200px;
-    padding: 12px 16px;
-    transition: all 0.3s ease;
-    line-height: 1.5;
-    font-family: inherit;
-    caret-color: var(--n-text-color);
-    text-align: left;
-    vertical-align: top;
-    position: relative;
-    text-indent: 0;
-
-    &::placeholder {
-      color: var(--n-text-color-3);
-      text-align: left;
-      vertical-align: top;
-    }
-
-    &:focus {
-      background: var(--n-color-hover);
-      caret-color: var(--n-text-color);
-      text-indent: 0;
-      padding-left: 0;
-      padding-right: 0;
-      padding-top: 5px;
-      padding-bottom: 12px;
-    }
-  }
-
-  :deep(.n-input__input-el) {
-    background: transparent;
-    border: none;
-  }
+.input-wrapper:focus-within {
+  border-color: var(--el-color-primary);
+  box-shadow: 0 4px 24px rgba(var(--el-color-primary-rgb), 0.15);
 }
 
-/* 深色模式特殊处理 */
-[data-theme="dark"] {
-  .glass-input :deep(.n-input__textarea-el) {
-    background: rgba(60, 60, 60, 0.9);
-    color: #fff;
-    caret-color: #fff;
-    text-indent: 0;
-
-    &::placeholder {
-      color: #aaa;
-      text-align: left;
-      vertical-align: top;
-    }
-
-    &:focus {
-      background: rgba(80, 80, 80, 0.95);
-      caret-color: #fff;
-    }
-  }
-}
-
-.glass-send-button {
-  height: 48px;
-  padding: 0 24px;
-  border-radius: 12px;
-  background: #18a058;
-  color: #fff;
+.chat-input :deep(.el-textarea__inner) {
+  box-shadow: none !important;
+  background: transparent;
   border: none;
-  box-shadow: 0 2px 8px rgba(24, 160, 88, 0.2);
-  transition: all 0.3s ease;
-  flex-shrink: 0;
-  align-self: flex-end;
-
-  &:hover {
-    background: #36ad6a;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(24, 160, 88, 0.3);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    transform: none;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  }
+  resize: none;
+  padding: 8px 12px;
+  font-size: 15px;
 }
 
-/* 深色模式按钮样式 */
-[data-theme="dark"] {
-  .glass-send-button {
-    background: #36ad6a;
-    color: #fff;
-    box-shadow: 0 2px 8px rgba(54, 173, 106, 0.4);
-
-    &:hover {
-      background: #42b883;
-      box-shadow: 0 4px 12px rgba(54, 173, 106, 0.5);
-    }
-
-    &:disabled {
-      background: #555;
-      opacity: 0.6;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    }
-  }
+.input-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
 }
 
-/* 响应式设计 */
+.input-footer {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  opacity: 0.8;
+}
+
+/* Tool Sidebar */
+.tool-sidebar {
+  width: 320px;
+  border-left: 1px solid var(--el-border-color-light);
+  background: var(--el-bg-color-page);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Transitions */
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition: transform 0.3s ease, width 0.3s ease, opacity 0.3s ease;
+}
+
+.slide-right-enter-from,
+.slide-right-leave-to {
+  width: 0;
+  transform: translateX(100%);
+  opacity: 0;
+}
+
 @media (max-width: 768px) {
-  .chat-header {
-    flex-direction: column;
-    gap: 12px;
-    align-items: stretch;
+  .chat-section {
+    margin-right: 0;
   }
   
-  .header-right {
-    justify-content: center;
+  .tool-sidebar {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 20;
+    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.1);
   }
-  
-  .message {
-    max-width: 95%;
-  }
-  
-  .floating-input-container {
-    width: 95%;
-    bottom: 20px;
-  }
-  
-  .glassmorphism-input {
-    padding: 12px;
-  }
-  
+
   .input-wrapper {
-    gap: 8px;
-  }
-  
-  .glass-input :deep(.n-input__textarea-el) {
-    font-size: 14px;
-    padding: 10px 12px;
-    min-height: 44px;
-    max-height: 150px;
-  }
-  
-  .glass-send-button {
-    height: 44px;
-    padding: 0 16px;
-    font-size: 14px;
-  }
-}
-
-.settings-btn {
-  transition: all 0.3s ease;
-  margin-left: 8px;
-
-  &:hover {
-    transform: scale(1.1);
-  }
-}
-
-.logout-btn {
-  transition: all 0.3s ease;
-  margin-left: 8px;
-
-  &:hover {
-    transform: scale(1.1);
-    color: var(--n-error-color);
+    border-radius: 16px;
   }
 }
 </style>

@@ -7,7 +7,19 @@ export interface ChatRequest {
     databaseId: number;
 }
 
-// 数据库配置
+// 数据库配置项（列表响应，不包含密码）
+export interface DatabaseConfigItem {
+    databaseId: number;
+    dbName: string;
+    userName: string;
+    host: string;
+    port: number;
+    dbType: string;
+    createTime?: number;
+    updateTime?: number;
+}
+
+// 数据库配置（创建/更新请求，包含密码）
 export interface DatabaseConfig {
     databaseId?: number;
     dbName: string;

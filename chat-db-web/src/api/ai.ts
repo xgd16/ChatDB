@@ -1,5 +1,5 @@
 import req, { type Response } from '@/utils/request';
-import type { ChatRequest, DatabaseConfig, AIModelItem } from '@/types/ai';
+import type { ChatRequest, DatabaseConfig, DatabaseConfigItem, AIModelItem } from '@/types/ai';
 import type { PaginatedResponse, PaginationParams } from '@/types/api';
 import { useUserStore } from '@/stores/counter';
 
@@ -18,7 +18,7 @@ export const chatApi = (data: ChatRequest): Promise<globalThis.Response> => {
 
 // 获取数据库配置列表
 export const getDatabaseConfigList = (params: PaginationParams = {}) => {
-    return req<Response<PaginatedResponse<DatabaseConfig>>>({
+    return req<Response<PaginatedResponse<DatabaseConfigItem>>>({
         url: '/api/v1/config/db/listConfig',
         method: 'GET',
         params
@@ -54,7 +54,7 @@ export const deleteDatabaseConfig = (databaseId: number) => {
 
 // 获取AI模型列表
 export const getAiModelList = () => {
-    return req<Response<PaginatedResponse<AIModelItem>>>({
+    return req<Response<{ list: AIModelItem[]; total: number }>>({
         url: '/api/v1/config/ai/model/list',
         method: 'GET'
     });

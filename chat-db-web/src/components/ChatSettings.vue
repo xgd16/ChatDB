@@ -1,98 +1,110 @@
 <template>
-  <n-drawer v-model:show="show" :width="400" placement="right">
-    <n-drawer-content title="聊天设置" closable>
-      <n-form label-placement="left" label-width="auto" require-mark-placement="right-hanging">
-        <!-- AI 提供商设置 -->
-        <n-form-item label="AI 提供商">
-          <n-select
-            :value="settingsStore.settings.ai"
-            :options="settingsStore.aiProviderOptions"
-            placeholder="选择AI模型"
-            style="width: 100%;"
-            @update:value="handleAIProviderChange"
-          />
-        </n-form-item>
-        
-        <!-- 模型版本设置 -->
-        <n-form-item label="模型版本">
-          <n-select
-            :value="settingsStore.settings.model"
-            :options="settingsStore.currentModelOptions"
-            placeholder="选择模型"
-            style="width: 100%;"
-            @update:value="handleModelChange"
-          />
-        </n-form-item>
-        
-        <n-divider />
-        
-        <!-- 数据库配置设置 -->
-        <n-form-item label="数据库配置">
-          <n-select
-            :value="settingsStore.settings.databaseId"
-            :options="settingsStore.databaseOptions"
-            placeholder="选择数据库"
-            style="width: 100%;"
-            @update:value="handleDatabaseChange"
-          />
-        </n-form-item>
-        
-        <n-divider />
-        
-        <!-- 主题模式设置 -->
-        <n-form-item label="主题模式">
-          <n-button
-            quaternary
-            @click="handleThemeToggle"
-            style="width: 100%; justify-content: flex-start;"
-          >
-            <template #icon>
-              <i :class="themeStore.isDark ? 'ri-sun-line' : 'ri-moon-line'"></i>
-            </template>
-            {{ themeStore.isDark ? '切换到浅色模式' : '切换到深色模式' }}
-          </n-button>
-        </n-form-item>
-        
-        <n-divider />
-        
-        <!-- 操作按钮 -->
-        <n-form-item>
-          <div style="display: flex; gap: 12px;">
-            <n-button
-              secondary
-              @click="handleResetSettings"
-              style="flex: 1;"
+  <el-drawer v-model="show" title="聊天设置" size="600px" direction="rtl">
+    <el-tabs v-model="activeTab" type="border-card">
+      <!-- 基础设置 -->
+      <el-tab-pane label="基础设置" name="basic">
+        <el-form label-position="left" label-width="auto" style="margin-top: 16px;">
+          <!-- AI 提供商设置 -->
+          <el-form-item label="AI 提供商">
+            <el-select
+              v-model="settingsStore.settings.ai"
+              placeholder="选择 AI 提供商"
+              style="width: 100%;"
+              @change="handleAIProviderChange"
             >
-              重置设置
-            </n-button>
-            <n-button
-              type="primary"
-              @click="handleSaveSettings"
-              style="flex: 1;"
+              <el-option
+                v-for="item in settingsStore.aiProviderOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </el-form-item>
+          
+          <!-- 模型版本设置 -->
+          <el-form-item label="模型版本">
+            <el-select
+              v-model="settingsStore.settings.model"
+              placeholder="选择模型"
+              style="width: 100%;"
+              @change="handleModelChange"
             >
-              保存设置
-            </n-button>
-          </div>
-        </n-form-item>
-      </n-form>
-    </n-drawer-content>
-  </n-drawer>
+              <el-option
+                v-for="item in settingsStore.currentModelOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </el-form-item>
+          
+          <el-divider />
+          
+          <!-- 数据库配置设置 -->
+          <el-form-item label="当前数据库">
+            <el-select
+              v-model="settingsStore.settings.databaseId"
+              placeholder="选择数据库"
+              style="width: 100%;"
+              @change="handleDatabaseChange"
+            >
+              <el-option
+                v-for="item in settingsStore.databaseOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </el-form-item>
+          
+          <el-divider />
+          
+          <!-- 操作按钮 -->
+          <el-form-item>
+            <div style="display: flex; gap: 12px;">
+              <el-button
+                plain
+                @click="handleResetSettings"
+                style="flex: 1;"
+              >
+                重置设置
+              </el-button>
+              <el-button
+                type="primary"
+                @click="handleSaveSettings"
+                style="flex: 1;"
+              >
+                保存设置
+              </el-button>
+            </div>
+          </el-form-item>
+        </el-form>
+      </el-tab-pane>
+
+      <!-- 数据库配置管理 -->
+      <el-tab-pane label="数据库配置" name="database">
+        <DatabaseConfigManager @refresh="handleDatabaseRefresh" />
+      </el-tab-pane>
+    </el-tabs>
+  </el-drawer>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { 
-  NDrawer, 
-  NDrawerContent, 
-  NForm, 
-  NFormItem, 
-  NDivider,
-  NSelect,
-  NButton,
-  useMessage
-} from 'naive-ui';
+import { computed, ref } from 'vue';
+import {
+  ElDrawer,
+  ElTabs,
+  ElTabPane,
+  ElForm,
+  ElFormItem,
+  ElDivider,
+  ElSelect,
+  ElOption,
+  ElButton,
+  ElMessage
+} from 'element-plus';
 import { useSettingsStore } from '@/stores/settings';
-import { useThemeStore } from '@/stores/theme';
+import DatabaseConfigManager from './DatabaseConfigManager.vue';
 
 interface Props {
   show: boolean;
@@ -105,9 +117,8 @@ interface Emits {
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
-const message = useMessage();
 const settingsStore = useSettingsStore();
-const themeStore = useThemeStore();
+const activeTab = ref('basic');
 
 // 计算属性：控制抽屉显示
 const show = computed({
@@ -118,37 +129,38 @@ const show = computed({
 // 处理 AI 提供商变化
 const handleAIProviderChange = (value: string) => {
   settingsStore.updateAIProvider(value);
-  message.success('AI 提供商已更新');
+  ElMessage.success('AI 提供商已更新');
 };
 
 // 处理模型变化
 const handleModelChange = (value: string) => {
   settingsStore.updateSettings({ model: value });
-  message.success('模型版本已更新');
+  ElMessage.success('模型版本已更新');
 };
 
 // 处理数据库变化
 const handleDatabaseChange = (value: number) => {
   settingsStore.updateSettings({ databaseId: value });
-  message.success('数据库配置已更新');
+  ElMessage.success('数据库配置已更新');
 };
 
-// 处理主题切换
-const handleThemeToggle = () => {
-  themeStore.toggleTheme();
-  message.success(`已切换到${themeStore.isDark ? '深色' : '浅色'}模式`);
+// 处理数据库配置刷新
+const handleDatabaseRefresh = () => {
+  // 数据库配置管理组件已经自动刷新了数据库选项列表
+  // 这里可以添加其他刷新逻辑，比如通知父组件
+  ElMessage.success('数据库配置已更新');
 };
 
 // 重置设置
 const handleResetSettings = () => {
   settingsStore.resetSettings();
-  message.success('设置已重置为默认值');
+  ElMessage.success('设置已重置为默认值');
 };
 
 // 保存设置
 const handleSaveSettings = () => {
   // 设置已经自动保存，这里只是给用户反馈
-  message.success('设置已保存');
+  ElMessage.success('设置已保存');
   show.value = false;
 };
 </script>
