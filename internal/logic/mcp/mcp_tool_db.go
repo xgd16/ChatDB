@@ -16,7 +16,6 @@ import (
 
 // ExecSql 执行SQL
 func (s *sMcpTool) ExecSql(ctx context.Context, request mcp.CallToolRequest) (out *mcp.CallToolResult, err error) {
-	g.DumpWithType(request.Params)
 	databaseId := request.GetInt("databaseId", 0)
 	if databaseId == 0 {
 		err = errors.New("databaseId is required")
@@ -56,17 +55,37 @@ func (s *sMcpTool) ExecSql(ctx context.Context, request mcp.CallToolRequest) (ou
 	if err != nil {
 		return
 	}
-	out = mcp.NewToolResultText(respStr)
+
+	// 在返回结果中包含执行的 SQL 语句信息
+	// 格式：SQL 语句作为前缀，然后是执行结果
+	fullResult := fmt.Sprintf("**执行的 SQL：**\n\n```sql\n%s\n```\n\n**执行结果：**\n\n%s", sql, respStr)
+	out = mcp.NewToolResultText(fullResult)
 	return
 }
 
 // GetDatabaseInfo 获取数据库信息
 func (s *sMcpTool) GetDatabaseInfo(ctx context.Context, request mcp.CallToolRequest) (out *mcp.CallToolResult, err error) {
+	// 兜底防止 g.DB 在未配置 default 数据源时直接 panic，避免整个服务挂掉
+	defer func() {
+		if r := recover(); r != nil {
+			consts.Logger.Errorf(ctx, "GetDatabaseInfo panic: %+v", r)
+			// 友好的错误提示返回给前端 / AI
+			out = mcp.NewToolResultText("数据库配置错误：未找到默认数据库配置，请检查服务端 config 中的数据库设置")
+			err = nil
+		}
+	}()
+
 	// 可选的数据库名称参数，未提供时使用默认连接
 	dbname := request.GetString("dbname", "")
 
-	// 获取数据库配置信息
-	dbConfig := g.DB(dbname).GetConfig()
+	// 获取数据库配置信息，先检查 DB 对象是否为 nil
+	db := g.DB(dbname)
+	if db == nil {
+		err = errors.New("数据库连接不存在，请检查数据库配置")
+		return
+	}
+
+	dbConfig := db.GetConfig()
 	if dbConfig == nil {
 		err = errors.New("无法获取数据库配置")
 		return
@@ -88,20 +107,26 @@ func (s *sMcpTool) GetDatabaseInfo(ctx context.Context, request mcp.CallToolRequ
 	// 测试连接并获取数据库版本信息
 	versionQuery := getVersionQuery(dbConfig.Type)
 	if versionQuery != "" {
-		sqlOut, queryErr := g.DB().Query(ctx, versionQuery)
-		if queryErr == nil && sqlOut != nil && len(sqlOut.List()) > 0 {
-			versionInfo := sqlOut.List()[0]
-			dbInfo["version"] = versionInfo
+		queryDb := g.DB(dbname)
+		if queryDb != nil {
+			sqlOut, queryErr := queryDb.Query(ctx, versionQuery)
+			if queryErr == nil && sqlOut != nil && len(sqlOut.List()) > 0 {
+				versionInfo := sqlOut.List()[0]
+				dbInfo["version"] = versionInfo
+			}
 		}
 	}
 
 	// 获取数据库大小（如果支持）
 	sizeQuery := getSizeQuery(dbConfig.Type, dbname)
 	if sizeQuery != "" {
-		sqlOut, queryErr := g.DB().Query(ctx, sizeQuery)
-		if queryErr == nil && sqlOut != nil && len(sqlOut.List()) > 0 {
-			sizeInfo := sqlOut.List()[0]
-			dbInfo["databaseSize"] = sizeInfo
+		queryDb := g.DB(dbname)
+		if queryDb != nil {
+			sqlOut, queryErr := queryDb.Query(ctx, sizeQuery)
+			if queryErr == nil && sqlOut != nil && len(sqlOut.List()) > 0 {
+				sizeInfo := sqlOut.List()[0]
+				dbInfo["databaseSize"] = sizeInfo
+			}
 		}
 	}
 

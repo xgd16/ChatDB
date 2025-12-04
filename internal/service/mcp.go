@@ -33,6 +33,10 @@ type (
 		ExecSql(ctx context.Context, request mcp.CallToolRequest) (out *mcp.CallToolResult, err error)
 		// GetDatabaseInfo 获取数据库信息
 		GetDatabaseInfo(ctx context.Context, request mcp.CallToolRequest) (out *mcp.CallToolResult, err error)
+		// ExportToExcel 将查询结果导出为 Excel 文件
+		ExportToExcel(ctx context.Context, request mcp.CallToolRequest) (out *mcp.CallToolResult, err error)
+		// ExportData 通用导出接口（支持 XLSX 和 JSON）
+		ExportData(ctx context.Context, request mcp.CallToolRequest) (out *mcp.CallToolResult, err error)
 		// ExecRedisCommand 执行Redis命令
 		ExecRedisCommand(ctx context.Context, request mcp.CallToolRequest) (out *mcp.CallToolResult, err error)
 		// RunSafeShellCommand 执行安全受限的终端命令

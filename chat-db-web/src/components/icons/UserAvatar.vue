@@ -1,23 +1,7 @@
 <template>
-  <svg
-    :width="size"
-    :height="size"
-    viewBox="0 0 40 40"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <!-- 背景圆形 -->
-    <circle cx="20" cy="20" r="20" fill="#3B82F6" />
-    
-    <!-- 头部 -->
-    <circle cx="20" cy="16" r="6" fill="white" />
-    
-    <!-- 身体 -->
-    <path
-      d="M8 32C8 26.4772 12.4772 22 18 22H22C27.5228 22 32 26.4772 32 32V40H8V32Z"
-      fill="white"
-    />
-  </svg>
+  <div class="user-avatar">
+    <i class="ri-user-fill"></i>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -29,3 +13,17 @@ withDefaults(defineProps<Props>(), {
   size: 40
 });
 </script>
+
+<style scoped>
+.user-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #3B82F6, #1E40AF);
+  border-radius: 50%;
+  color: white;
+  font-size: 22px;
+}
+</style>

@@ -173,6 +173,37 @@ func (s *sMcpHandler) GetList() []model.McpReg {
 			},
 			Fn: service.McpTool().ExecRedisCommand,
 		},
+		{
+			Name:        "ExportToExcel",
+			Description: "Export query results or data to an Excel file (.xlsx format) and return the download URL",
+			ToolOptions: []mcp.ToolOption{
+				mcp.WithString("data",
+					mcp.Required(),
+					mcp.Description("The data to export in JSON format (array of objects)"),
+				),
+				mcp.WithString("fileName",
+					mcp.Description("The name of the exported file (without extension, defaults to timestamp-based name)"),
+				),
+			},
+			Fn: service.McpTool().ExportToExcel,
+		},
+		{
+			Name:        "ExportData",
+			Description: "Export data to Excel or JSON format",
+			ToolOptions: []mcp.ToolOption{
+				mcp.WithString("data",
+					mcp.Required(),
+					mcp.Description("The data to export in JSON format (array of objects)"),
+				),
+				mcp.WithString("fileName",
+					mcp.Description("The name of the exported file (without extension)"),
+				),
+				mcp.WithString("format",
+					mcp.Description("Export format: 'xlsx' (default) or 'json'"),
+				),
+			},
+			Fn: service.McpTool().ExportData,
+		},
 	}
 }
 

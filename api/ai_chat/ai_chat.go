@@ -17,4 +17,5 @@ type IAiChatV1 interface {
 	DeleteDataBaseConfig(ctx context.Context, req *v1.DeleteDataBaseConfigReq) (res *v1.DeleteDataBaseConfigRes, err error)
 	GetDataBaseConfigList(ctx context.Context, req *v1.GetDataBaseConfigListReq) (res *v1.GetDataBaseConfigListRes, err error)
 	GetAiModelList(ctx context.Context, req *v1.GetAiModelListReq) (res *v1.GetAiModelListRes, err error)
+	ExportDownload(ctx context.Context, req *v1.ExportDownloadReq) (res *v1.ExportDownloadRes, err error)
 }

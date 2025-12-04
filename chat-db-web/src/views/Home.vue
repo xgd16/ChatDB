@@ -51,9 +51,9 @@
 
           <div v-else class="message-list">
             <template v-for="(message, index) in messages" :key="index">
-              <!-- 用户消息始终显示；助手消息只要存在就显示，内容由打字机逐步填充 -->
+              <!-- 用户消息始终显示；助手消息只有有内容才显示（加载状态单独处理） -->
               <div
-                v-if="message.role === 'user' || (message.role === 'assistant' && (message.content || isLoading || index === messages.length - 1))"
+                v-if="message.role === 'user' || (message.role === 'assistant' && message.content)"
                 class="message-row"
                 :class="message.role"
               >
@@ -71,8 +71,8 @@
               </div>
             </template>
 
-            <!-- Loading State -->
-            <div v-if="isLoading" class="message-row assistant loading">
+            <!-- Loading State - 只在AI还没有任何输出时显示 -->
+            <div v-if="isLoading && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && !messages[messages.length - 1].content" class="message-row assistant loading">
               <div class="avatar">
                 <AIAvatar />
               </div>
@@ -97,7 +97,7 @@
               :autosize="{ minRows: 1, maxRows: 8 }"
               placeholder="输入您的问题..."
               class="chat-input"
-              @keydown.enter.exact.prevent="handleSendMessage"
+              @keydown.ctrl.enter="handleSendMessage"
             />
             <div class="input-actions">
               <el-tooltip content="工具面板" placement="top">
@@ -111,7 +111,7 @@
             </div>
           </div>
           <div class="input-footer">
-            <span>按 Enter 发送，Shift + Enter 换行</span>
+            <span>Ctrl + Enter 发送，Enter 换行</span>
           </div>
         </div>
       </div>
@@ -160,10 +160,6 @@ const isLoading = ref(false);
 const showSettings = ref(false);
 const showToolPanel = ref(true);
 const toolEvents = ref<Array<{ name: string; output?: any; timestamp?: number }>>([]);
-
-// 打字机效果队列
-const typingQueue = ref('');
-let typingTimer: number | null = null;
 
 const isDark = computed(() => themeStore.isDark);
 
@@ -224,29 +220,6 @@ const formatTime = (timestamp: number) => {
   return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 };
 
-// 启动/维护打字机效果，将新内容缓存在队列里，按字符逐个输出
-const startTyping = (target: ChatMessage, text: string) => {
-  if (!text) return;
-  typingQueue.value += text;
-
-  if (typingTimer !== null) return;
-
-  typingTimer = window.setInterval(() => {
-    if (!typingQueue.value.length) {
-      if (typingTimer !== null) {
-        window.clearInterval(typingTimer);
-        typingTimer = null;
-      }
-      return;
-    }
-
-    // 取出一个字符追加到当前助手消息
-    const ch = typingQueue.value[0];
-    typingQueue.value = typingQueue.value.slice(1);
-    target.content += ch;
-  }, 16); // 约 60fps，可根据喜好调节速度
-};
-
 // 发送消息
 const handleSendMessage = async () => {
   if (!inputMessage.value.trim() || isLoading.value) return;
@@ -299,6 +272,7 @@ const handleSendMessage = async () => {
       timestamp: Date.now()
     };
     messages.value.push(assistantMessage);
+    const assistantMessageIndex = messages.value.length - 1;
 
     let buffer = '';
     let traceId = '';
@@ -326,16 +300,54 @@ const handleSendMessage = async () => {
             }
 
             if (event.event === 'message' && event.content) {
-              // 将 SSE 新内容交给打字机队列，逐字符输出
-              startTyping(assistantMessage, event.content);
+              // 将 SSE 新内容直接添加到消息（不使用打字机效果，以便实时显示）
+              const message = messages.value[assistantMessageIndex];
+              if (message && message.role === 'assistant') {
+                message.content += event.content;
+              }
+              nextTick(() => {
+                scrollToBottom();
+              });
             } else if (event.event === 'tool_call') {
               // 处理工具调用事件
               if (event.data) {
-                toolEvents.value.push({
+                const toolEvent: any = {
                   name: event.data.name || '未知工具',
                   output: event.data.output,
                   timestamp: event.createTime || Date.now()
-                });
+                };
+                
+                // 如果是 SQL_Actuator 工具，从输出中提取 SQL 语句
+                if (event.data.name === 'SQL_Actuator' && event.data.output) {
+                  const outputText = String(event.data.output);
+                  // 尝试从输出中提取 SQL 语句（格式：```sql\nSELECT ...```）
+                  const sqlMatch = outputText.match(/```sql\n([\s\S]*?)\n```/);
+                  if (sqlMatch && sqlMatch[1]) {
+                    toolEvent.sql = sqlMatch[1].trim();
+                    // 移除 SQL 部分，只保留结果
+                    const resultMatch = outputText.match(/\*\*执行结果：\*\*\n\n([\s\S]*)/);
+                    if (resultMatch && resultMatch[1]) {
+                      toolEvent.output = resultMatch[1];
+                    }
+                  }
+                }
+                
+                // 如果是导出工具，从输出中提取下载链接
+                if ((event.data.name === 'ExportToExcel' || event.data.name === 'ExportData') && event.data.output) {
+                  try {
+                    const outputText = String(event.data.output);
+                    const exportData = JSON.parse(outputText);
+                    if (exportData.downloadUrl) {
+                      toolEvent.downloadUrl = exportData.downloadUrl;
+                      toolEvent.fileName = exportData.fileName;
+                      toolEvent.message = exportData.message;
+                    }
+                  } catch (e) {
+                    console.error('解析导出数据失败:', e);
+                  }
+                }
+                
+                toolEvents.value.push(toolEvent);
               }
             }
           } catch (e) {
@@ -351,18 +363,6 @@ const handleSendMessage = async () => {
     ElMessage.error(error.message || '发送消息失败，请重试');
     messages.value.pop(); // 移除用户消息
   } finally {
-    // 结束时把还在打字队列里的内容一次性刷完
-    if (typingTimer !== null) {
-      window.clearInterval(typingTimer);
-      typingTimer = null;
-    }
-    if (typingQueue.value) {
-      const lastMsg = messages.value[messages.value.length - 1];
-      if (lastMsg && lastMsg.role === 'assistant') {
-        lastMsg.content += typingQueue.value;
-      }
-      typingQueue.value = '';
-    }
     isLoading.value = false;
   }
 };
@@ -634,11 +634,12 @@ const handleLogout = () => {
 }
 
 .message-bubble {
-  max-width: 80%;
+  max-width: 85%;
   padding: 12px 16px;
   border-radius: 16px;
   background: var(--el-fill-color-light);
   position: relative;
+  overflow: hidden;
 }
 
 .message-row.user .message-bubble {
@@ -658,27 +659,153 @@ const handleLogout = () => {
   line-height: 1.6;
   font-size: 15px;
   word-break: break-word;
+  overflow: hidden;
 }
 
 /* Markdown Styles Override within bubble */
 .bubble-content :deep(p) {
   margin-bottom: 8px;
+  margin-top: 0;
 }
 
 .bubble-content :deep(p:last-child) {
   margin-bottom: 0;
 }
 
+/* 下载链接按钮样式（针对导出接口地址） */
+.bubble-content :deep(a[href^="/api/ai_chat/v1/export/download"]) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  margin-top: 4px;
+  background: var(--el-color-primary);
+  color: #fff;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.bubble-content :deep(a[href^="/api/ai_chat/v1/export/download"]::before) {
+  content: "⇩";
+  font-size: 14px;
+}
+
+.bubble-content :deep(a[href^="/api/ai_chat/v1/export/download"]:hover) {
+  background: var(--el-color-primary-dark-2);
+}
+
+/* Code blocks */
 .bubble-content :deep(pre) {
   background: rgba(0, 0, 0, 0.05);
   border-radius: 8px;
   padding: 12px;
   overflow-x: auto;
   margin: 8px 0;
+  max-width: 100%;
 }
 
 .user .bubble-content :deep(pre) {
   background: rgba(255, 255, 255, 0.15);
+}
+
+/* Tables */
+.bubble-content :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+  font-size: 13px;
+}
+
+.bubble-content :deep(th),
+.bubble-content :deep(td) {
+  border: 1px solid var(--el-border-color-light);
+  padding: 8px 12px;
+  text-align: left;
+  word-break: break-word;
+}
+
+.bubble-content :deep(th) {
+  background: var(--el-fill-color-light);
+  font-weight: 600;
+}
+
+.message-row.user .bubble-content :deep(th) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.bubble-content :deep(tr:nth-child(even)) {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.message-row.user .bubble-content :deep(tr:nth-child(even)) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Lists */
+.bubble-content :deep(ul),
+.bubble-content :deep(ol) {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.bubble-content :deep(li) {
+  margin: 4px 0;
+  word-break: break-word;
+}
+
+.bubble-content :deep(ul ul),
+.bubble-content :deep(ol ol),
+.bubble-content :deep(ul ol),
+.bubble-content :deep(ol ul) {
+  margin: 4px 0;
+}
+
+/* Headings */
+.bubble-content :deep(h1),
+.bubble-content :deep(h2),
+.bubble-content :deep(h3),
+.bubble-content :deep(h4),
+.bubble-content :deep(h5),
+.bubble-content :deep(h6) {
+  margin-top: 12px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.bubble-content :deep(h1:first-child),
+.bubble-content :deep(h2:first-child),
+.bubble-content :deep(h3:first-child),
+.bubble-content :deep(h4:first-child),
+.bubble-content :deep(h5:first-child),
+.bubble-content :deep(h6:first-child) {
+  margin-top: 0;
+}
+
+/* Inline code */
+.bubble-content :deep(code) {
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 0.9em;
+  word-break: break-word;
+}
+
+.user .bubble-content :deep(code) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Blockquotes */
+.bubble-content :deep(blockquote) {
+  border-left: 4px solid var(--el-color-primary);
+  padding-left: 12px;
+  margin: 8px 0;
+  opacity: 0.8;
+  font-style: italic;
 }
 
 .message-meta {
@@ -720,13 +847,30 @@ const handleLogout = () => {
 /* Input Section */
 .input-section {
   flex-shrink: 0;
-  padding: 24px;
+  padding: 16px 24px 20px;
   background: var(--el-bg-color);
   border-top: 1px solid var(--el-border-color-lighter);
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 8px;
   z-index: 5;
+}
+
+.input-actions :deep(.el-button) {
+  --el-button-size: 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  min-width: unset;
+}
+
+.input-actions :deep(.el-button--text) {
+  color: var(--el-text-color-secondary);
+}
+
+.input-actions :deep(.el-button--text:hover) {
+  color: var(--el-color-primary);
 }
 
 .input-wrapper {
@@ -735,17 +879,22 @@ const handleLogout = () => {
   position: relative;
   background: var(--el-bg-color-overlay);
   border: 1px solid var(--el-border-color);
-  border-radius: 24px; /* Rounded pill-like or rounded rect */
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  padding: 8px;
+  border-radius: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  padding: 10px 12px;
   display: flex;
-  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
   transition: all 0.3s;
 }
 
 .input-wrapper:focus-within {
   border-color: var(--el-color-primary);
-  box-shadow: 0 4px 24px rgba(var(--el-color-primary-rgb), 0.15);
+  box-shadow: 0 2px 16px rgba(var(--el-color-primary-rgb), 0.12);
+}
+
+.chat-input {
+  flex: 1;
 }
 
 .chat-input :deep(.el-textarea__inner) {
@@ -753,22 +902,23 @@ const handleLogout = () => {
   background: transparent;
   border: none;
   resize: none;
-  padding: 8px 12px;
+  padding: 6px 4px;
   font-size: 15px;
+  line-height: 1.5;
 }
 
 .input-actions {
   display: flex;
-  justify-content: space-between;
+  gap: 4px;
   align-items: center;
-  padding: 4px 8px;
+  flex-shrink: 0;
 }
 
 .input-footer {
   margin-top: 8px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
-  opacity: 0.8;
+  opacity: 0.6;
 }
 
 /* Tool Sidebar */
@@ -809,6 +959,28 @@ const handleLogout = () => {
 
   .input-wrapper {
     border-radius: 16px;
+  }
+
+  .message-list {
+    max-width: 100%;
+  }
+
+  .message-bubble {
+    max-width: 100%;
+  }
+
+  .bubble-content :deep(table) {
+    font-size: 12px;
+  }
+
+  .bubble-content :deep(th),
+  .bubble-content :deep(td) {
+    padding: 6px 8px;
+  }
+
+  .bubble-content :deep(pre) {
+    padding: 8px;
+    font-size: 12px;
   }
 }
 </style>

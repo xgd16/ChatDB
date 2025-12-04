@@ -56,12 +56,16 @@ func (s *sAiChat) Chat(ctx context.Context, in model.ChatInput, respChan chan an
 	mcpTools, err := mcp.GetTools(ctx, &mcp.Config{
 		Cli: consts.McpClient,
 		ToolCallResultHandler: func(ctx context.Context, name string, result *gMcp.CallToolResult) (out *gMcp.CallToolResult, err error) {
+			dataMap := g.Map{
+				"name":   name,
+				"output": result.Content[0],
+			}
+			// SQL_Actuator 工具特殊处理，从请求参数中提取 SQL 语句
+			// 注意：这里需要从 context 中获取工具的输入参数
+			// 由于 result 中没有直接的输入信息，我们会在下一步通过拦截来实现
 			model.SendChatOutDataItem(ctx, model.ChatOutDataItem{
 				Event: "tool_call",
-				Data: g.Map{
-					"name":   name,
-					"output": result.Content[0],
-				},
+				Data:  dataMap,
 			}, respChan)
 			out = result
 			return
@@ -99,7 +103,7 @@ func (s *sAiChat) Chat(ctx context.Context, in model.ChatInput, respChan chan an
 	if g.IsEmpty(in.Prompt) {
 		in.Prompt = "-"
 	}
-	g.DumpWithType(prompt.GetContent(in.DatabaseId, dbTypeT.String()))
+
 	out, err := aiAgent.Stream(ctx, []*schema.Message{
 		{
 			Role:    schema.System,
