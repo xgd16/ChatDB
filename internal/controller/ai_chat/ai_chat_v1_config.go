@@ -4,6 +4,7 @@ import (
 	"ai-chat-sql/internal/consts"
 	"ai-chat-sql/internal/dao"
 	"ai-chat-sql/internal/model"
+	"ai-chat-sql/internal/model/entity"
 	"ai-chat-sql/internal/service"
 	"context"
 	"encoding/json"
@@ -100,11 +101,15 @@ func (c *ControllerV1) UpdateDataBaseConfig(ctx context.Context, req *v1.UpdateD
 	updateData := g.Map{
 		"db_name":     req.DbName,
 		"user_name":   req.UserName,
-		"password":    req.Password,
 		"host":        req.Host,
 		"port":        req.Port,
 		"db_type":     req.DbType,
 		"update_time": int(now),
+	}
+
+	// 如果密码不为空，则更新密码；为空字符串则不修改密码，避免误清空
+	if req.Password != "" {
+		updateData["password"] = req.Password
 	}
 
 	if _, err = dao.DatabaseConf.Ctx(ctx).Where("database_id = ?", req.DatabaseId).Data(updateData).Update(); err != nil {
@@ -160,10 +165,27 @@ func (c *ControllerV1) GetDataBaseConfigList(ctx context.Context, req *v1.GetDat
 		return
 	}
 
-	// 转换数据结构
-	var configs []*v1.SetDataBaseConfigReq
-	if err = list.Structs(&configs); err != nil {
+	// 转换数据结构，避免返回密码等敏感信息
+	var dbEntities []*entity.DatabaseConf
+	if err = list.Structs(&dbEntities); err != nil {
 		return
+	}
+
+	configs := make([]*model.DatabaseConfigItem, 0, len(dbEntities))
+	for _, item := range dbEntities {
+		if item == nil {
+			continue
+		}
+		configs = append(configs, &model.DatabaseConfigItem{
+			DatabaseId: item.DatabaseId,
+			DbName:     item.DbName,
+			UserName:   item.UserName,
+			Host:       item.Host,
+			Port:       item.Port,
+			DbType:     item.DbType,
+			CreateTime: item.CreateTime,
+			UpdateTime: item.UpdateTime,
+		})
 	}
 
 	res.List = configs

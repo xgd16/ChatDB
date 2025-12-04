@@ -100,6 +100,11 @@ func (s *sMcpHandler) GetList() []model.McpReg {
 			Name:        "SQL_Actuator",
 			Description: "Convert the user's requirements into SQL statements, execute the SQL statements, and return the execution results",
 			ToolOptions: []mcp.ToolOption{
+				mcp.WithNumber(
+					"databaseId",
+					mcp.Required(),
+					mcp.Description("The database ID to be used"),
+				),
 				mcp.WithString("sql",
 					mcp.Required(),
 					mcp.Description("The SQL statement to be executed"),
@@ -148,9 +153,9 @@ func (s *sMcpHandler) GetList() []model.McpReg {
 			Name:        "GetDatabaseInfo",
 			Description: "Get database information including type, name, and connection details",
 			ToolOptions: []mcp.ToolOption{
-				// mcp.WithString("dbname",
-				// 	mcp.Description("The database name to query (optional, uses default if not provided)"),
-				// ),
+				mcp.WithString("dbname",
+					mcp.Description("The database name to query (optional, uses default connection if omitted)"),
+				),
 			},
 			Fn: service.McpTool().GetDatabaseInfo,
 		},

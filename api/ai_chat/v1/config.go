@@ -48,8 +48,8 @@ type GetDataBaseConfigListReq struct {
 }
 
 type GetDataBaseConfigListRes struct {
-	List  []*SetDataBaseConfigReq `json:"list" dc:"数据库配置列表"`
-	Total int                     `json:"total" dc:"总数"`
+	List  []*model.DatabaseConfigItem `json:"list" dc:"数据库配置列表"`
+	Total int                         `json:"total" dc:"总数"`
 }
 
 type GetAiModelListReq struct {

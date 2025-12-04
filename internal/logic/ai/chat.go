@@ -99,6 +99,7 @@ func (s *sAiChat) Chat(ctx context.Context, in model.ChatInput, respChan chan an
 	if g.IsEmpty(in.Prompt) {
 		in.Prompt = "-"
 	}
+	g.DumpWithType(prompt.GetContent(in.DatabaseId, dbTypeT.String()))
 	out, err := aiAgent.Stream(ctx, []*schema.Message{
 		{
 			Role:    schema.System,
